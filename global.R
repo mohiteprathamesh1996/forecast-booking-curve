@@ -17,6 +17,9 @@ library(mgcv)
 library(plotly)
 library(DT)
 
+openai_api_key <- Sys.getenv("OPENAI_API_KEY")
+
+
 # Load dataset (Historical booking curves)
 dataset <- read.csv("data/dataset.csv") %>%
   mutate(departure_Date = as.Date(departure_Date)) %>%
@@ -28,11 +31,11 @@ output <- read.csv("data/output.csv") %>%
   arrange(departure_Date)
 
 # Compute pickup
-pickup_info <- dataset %>% 
-  group_by(Origin_Destination) %>% 
+pickup_info <- dataset %>%
+  group_by(Origin_Destination) %>%
   summarise(across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)), .names = "{.col}")) %>%
   mutate(across(-c(Origin_Destination, Target), ~ Target - ., .names = "{.col}")) %>%
-  select(-Target) %>% 
+  select(-Target) %>%
   pivot_longer(
     cols = starts_with("X"),
     names_to = "Days Before Departure",
@@ -42,7 +45,7 @@ pickup_info <- dataset %>%
     `Days Before Departure` = as.numeric(
       gsub("[^0-9]", "", `Days Before Departure`)
     )
-  ) %>% 
+  ) %>%
   drop_na()
 
 # Reshaped dataset in long format for time-series analysis
@@ -83,16 +86,16 @@ dataset_long <- dataset %>%
     BookingRateAccelaration = DailyBookingRate - lead(DailyBookingRate),
     PercentageTargetReached = `Seats Sold` / Target
   ) %>%
-  ungroup() %>% 
+  ungroup() %>%
   mutate(
     PercentageTargetReached = ifelse(
-      PercentageTargetReached>1, 1, PercentageTargetReached
+      PercentageTargetReached > 1, 1, PercentageTargetReached
     )
-  ) %>% 
-  arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>% 
-  group_by(departure_Date, Origin_Destination) %>% 
-  mutate(LF_PercentageTargetReached = lead(PercentageTargetReached)) %>% 
-  ungroup() %>% 
+  ) %>%
+  arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>%
+  group_by(departure_Date, Origin_Destination) %>%
+  mutate(LF_PercentageTargetReached = lead(PercentageTargetReached)) %>%
+  ungroup() %>%
   left_join(
     pickup_info,
     by = c("Origin_Destination", "Days Before Departure")
@@ -135,17 +138,17 @@ output_long <- output %>%
     BookingRateAccelaration = DailyBookingRate - lead(DailyBookingRate),
     PercentageTargetReached = `Seats Sold` / Target
   ) %>%
-  ungroup() %>% 
+  ungroup() %>%
   mutate(
     PercentageTargetReached = ifelse(
-      PercentageTargetReached>1, 1, PercentageTargetReached
+      PercentageTargetReached > 1, 1, PercentageTargetReached
     )
-  ) %>% 
-  arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>% 
-  group_by(departure_Date, Origin_Destination) %>% 
-  mutate(LF_PercentageTargetReached = lead(PercentageTargetReached)) %>% 
-  ungroup() %>% 
-  drop_na() %>% 
+  ) %>%
+  arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>%
+  group_by(departure_Date, Origin_Destination) %>%
+  mutate(LF_PercentageTargetReached = lead(PercentageTargetReached)) %>%
+  ungroup() %>%
+  drop_na() %>%
   left_join(
     pickup_info,
     by = c("Origin_Destination", "Days Before Departure")
@@ -161,7 +164,7 @@ historical_summary <- dataset_long %>%
     LF_PercentageTargetReached = mean(LF_PercentageTargetReached, na.rm = TRUE),
     AvgPickUp = mean(AvgPickUp, na.rm = TRUE)
   ) %>%
-  ungroup() %>% 
+  ungroup() %>%
   drop_na()
 
 

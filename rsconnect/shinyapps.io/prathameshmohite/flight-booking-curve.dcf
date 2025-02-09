@@ -1,0 +1,13 @@
+name: flight-booking-curve
+title: flight-booking-curve
+username: prathameshmohite
+account: prathameshmohite
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13945805
+bundleId: 9772914
+url: https://prathameshmohite.shinyapps.io/flight-booking-curve/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .github/workflows/main.yml|.RData

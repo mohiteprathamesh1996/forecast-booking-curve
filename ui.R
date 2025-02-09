@@ -9,7 +9,19 @@ ui <- fluidPage(
         "Select Departure Date:",
         choices = departure_dates
       ),
-      selectInput("route", "Select Sector:", choices = routes),
+      selectInput(
+        "route",
+        "Select Sector:",
+        choices = routes
+      ),
+      sliderInput(
+        "top_n_train",
+        "Most Recent Training Window (%):",
+        min = 0,
+        max = 100,
+        value = 100,
+        step = 1
+      ),
       sliderInput(
         "test_slice",
         "Set Testing Slice (%):",
@@ -21,18 +33,22 @@ ui <- fluidPage(
       sliderInput(
         "proph_changepoint_num",
         "Set Prophet Changepoints:",
-        min = 1,
+        min = 0,
         max = 7,
         value = 1,
         step = 1
       )
     ),
+    
     mainPanel(
       # h3("Prediction Plot"),
       div(plotlyOutput("forecast_plot"), style = "width: 90%; margin: auto;"),
       
       uiOutput("historical_title"),
       plotOutput("historical_plots"),
+      
+      h3("Analysis of Trajectory"),
+      uiOutput("ai_insights"),
       
       h3("Model Performance Metrics"),
       DTOutput("accuracy_table")

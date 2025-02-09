@@ -22,6 +22,7 @@ library(lubridate)
 library(timeDate)
 library(gridExtra)
 library(mgcv)
+library(openai)
 
 # Load dataset (Historical booking curves)
 dataset <- read.csv("data/dataset.csv") %>%
@@ -34,11 +35,11 @@ output <- read.csv("data/output.csv") %>%
   arrange(departure_Date)
 
 # Compute pickup
-pickup_info <- dataset %>% 
-  group_by(Origin_Destination) %>% 
+pickup_info <- dataset %>%
+  group_by(Origin_Destination) %>%
   summarise(across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)), .names = "{.col}")) %>%
   mutate(across(-c(Origin_Destination, Target), ~ Target - ., .names = "{.col}")) %>%
-  select(-Target) %>% 
+  select(-Target) %>%
   pivot_longer(
     cols = starts_with("X"),
     names_to = "Days Before Departure",
@@ -48,7 +49,7 @@ pickup_info <- dataset %>%
     `Days Before Departure` = as.numeric(
       gsub("[^0-9]", "", `Days Before Departure`)
     )
-  ) %>% 
+  ) %>%
   drop_na()
 
 # Reshaped dataset in long format for time-series analysis
@@ -89,20 +90,20 @@ dataset_long <- dataset %>%
     BookingRateAccelaration = DailyBookingRate - lead(DailyBookingRate),
     PercentageTargetReached = `Seats Sold` / Target
   ) %>%
-  ungroup() %>% 
+  ungroup() %>%
   mutate(
     PercentageTargetReached = ifelse(
-      PercentageTargetReached>1, 1, PercentageTargetReached
+      PercentageTargetReached > 1, 1, PercentageTargetReached
     )
-  ) %>% 
-  arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>% 
-  group_by(departure_Date, Origin_Destination) %>% 
-  mutate(LF_PercentageTargetReached = lead(PercentageTargetReached)) %>% 
-  ungroup() %>% 
+  ) %>%
+  arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>%
+  group_by(departure_Date, Origin_Destination) %>%
+  mutate(LF_PercentageTargetReached = lead(PercentageTargetReached)) %>%
+  ungroup() %>%
   left_join(
     pickup_info,
     by = c("Origin_Destination", "Days Before Departure")
-    )
+  )
 
 output_long <- output %>%
   pivot_longer(
@@ -141,21 +142,21 @@ output_long <- output %>%
     BookingRateAccelaration = DailyBookingRate - lead(DailyBookingRate),
     PercentageTargetReached = `Seats Sold` / Target
   ) %>%
-  ungroup() %>% 
+  ungroup() %>%
   mutate(
     PercentageTargetReached = ifelse(
-      PercentageTargetReached>1, 1, PercentageTargetReached
+      PercentageTargetReached > 1, 1, PercentageTargetReached
     )
-  ) %>% 
-  arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>% 
-  group_by(departure_Date, Origin_Destination) %>% 
-  mutate(LF_PercentageTargetReached = lead(PercentageTargetReached)) %>% 
-  ungroup() %>% 
-  drop_na() %>% 
+  ) %>%
+  arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>%
+  group_by(departure_Date, Origin_Destination) %>%
+  mutate(LF_PercentageTargetReached = lead(PercentageTargetReached)) %>%
+  ungroup() %>%
+  drop_na() %>%
   left_join(
     pickup_info,
     by = c("Origin_Destination", "Days Before Departure")
-    )
+  )
 
 historical_summary <- dataset_long %>%
   group_by(Origin_Destination, `Days Before Departure`) %>%
@@ -167,7 +168,7 @@ historical_summary <- dataset_long %>%
     LF_PercentageTargetReached = mean(LF_PercentageTargetReached, na.rm = TRUE),
     AvgPickUp = mean(AvgPickUp, na.rm = TRUE)
   ) %>%
-  ungroup() %>% 
+  ungroup() %>%
   drop_na()
 
 # historical_summary %>% write.csv("historical_summary.csv")
@@ -179,7 +180,7 @@ historical_summary <- dataset_long %>%
 ```{r, fig.width=12, fig.height=7}
 grid.arrange(
   historical_summary %>%
-    mutate(`Days Before Departure` = -1*`Days Before Departure`) %>%
+    mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
     ggplot(
       aes(
         x = `Days Before Departure`,
@@ -189,9 +190,8 @@ grid.arrange(
     geom_line(na.rm = TRUE) +
     facet_wrap(~Origin_Destination) +
     theme_bw(),
-  
   historical_summary %>%
-    mutate(`Days Before Departure` = -1*`Days Before Departure`) %>% 
+    mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
     ggplot(
       aes(
         x = `Days Before Departure`,
@@ -201,9 +201,8 @@ grid.arrange(
     geom_line(na.rm = TRUE) +
     facet_wrap(~Origin_Destination) +
     theme_bw(),
-  
   historical_summary %>%
-    mutate(`Days Before Departure` = -1*`Days Before Departure`) %>% 
+    mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
     ggplot(
       aes(
         x = `Days Before Departure`,
@@ -225,17 +224,17 @@ grid.arrange(
 
 
 ```{r}
-dep_date <- "2023-03-11"
+dep_date <- "2023-03-10"
 route <- "DXB-XXX"
 
-train <- output_long %>% 
+train <- output_long %>%
   filter(
-    departure_Date==dep_date  &
-      Origin_Destination==route
-    ) %>% 
+    departure_Date == dep_date &
+      Origin_Destination == route
+  ) %>%
   mutate(
     `Date Before Departure` = departure_Date - days(`Days Before Departure`)
-    ) %>% 
+  ) %>%
   select(
     `Date Before Departure`,
     `Seats Sold`,
@@ -244,62 +243,66 @@ train <- output_long %>%
     PercentageTargetReached,
     LF_PercentageTargetReached,
     AvgPickUp
-    ) %>% 
-  arrange(`Date Before Departure`) %>% 
+  ) %>%
+  arrange(`Date Before Departure`) %>%
   drop_na()
 
-target_cap <- output_long %>% 
+# train <- train %>%
+#   arrange(`Date Before Departure`) %>%
+#   tail(round(1.00 * nrow(train)))
+
+target_cap <- output_long %>%
   filter(
-    departure_Date==dep_date  &
-      Origin_Destination==route
-    ) %>% 
-  pull(Target) %>% 
+    departure_Date == dep_date &
+      Origin_Destination == route
+  ) %>%
+  pull(Target) %>%
   unique()
 
-days_ahead <- output_long %>% 
+days_ahead <- output_long %>%
   filter(
-    departure_Date==dep_date  &
-      Origin_Destination==route
-    ) %>% 
-  pull(`Days Before Departure`) %>% 
+    departure_Date == dep_date &
+      Origin_Destination == route
+  ) %>%
+  pull(`Days Before Departure`) %>%
   min()
 
 splits <- time_series_split(
-  data = train, 
-  assess = paste(round(0.20*nrow(train)), "days"),
-  # assess = paste(days_ahead, "days"), 
+  data = train,
+  assess = paste(round(0.20 * nrow(train)), "days"),
+  # assess = paste(days_ahead, "days"),
   cumulative = TRUE
-  )
+)
 
-model_arima <- arima_reg() %>% 
-  set_engine("auto_arima") %>% 
+model_arima <- arima_reg() %>%
+  set_engine("auto_arima") %>%
   fit(
     `Seats Sold` ~ `Date Before Departure`,
     training(splits)
-    )
+  )
 
 
 model_prophet <- prophet_reg(
   growth = "logistic",
   logistic_cap = target_cap
-  ) %>% 
-  set_engine("prophet") %>% 
+) %>%
+  set_engine("prophet") %>%
   fit(
     `Seats Sold` ~ `Date Before Departure`,
     training(splits)
-    )
+  )
 
 model_prophet_with_reg <- prophet_reg(
   growth = "logistic",
   season = "multiplicative",
-  logistic_cap = target_cap, 
+  logistic_cap = target_cap,
   changepoint_num = 1
-  ) %>% 
-  set_engine("prophet") %>% 
+) %>%
+  set_engine("prophet") %>%
   fit(
-    `Seats Sold` ~ `Date Before Departure` + LF_PercentageTargetReached + AvgPickUp,
+    `Seats Sold` ~ `Date Before Departure` + DailyBookingRate + LF_PercentageTargetReached + AvgPickUp,
     training(splits)
-    )
+  )
 
 
 # Modeltime table
@@ -307,7 +310,7 @@ model_tbl <- modeltime_table(
   model_arima,
   model_prophet,
   model_prophet_with_reg
-  )
+)
 
 # Calibrate models
 calib_tbl <- model_tbl %>%
@@ -318,59 +321,160 @@ future_data <- future_frame(
   .data = train,
   .date_var = `Date Before Departure`,
   .length_out = paste(days_ahead, "days")
-  ) %>% 
+) %>%
   mutate(
     `Days Before Departure` = as.integer(
       as.Date(dep_date) - `Date Before Departure`
-      )
-    ) %>% 
+    )
+  ) %>%
   left_join(
-    historical_summary %>% 
-      filter(Origin_Destination==route) %>% 
+    historical_summary %>%
+      filter(Origin_Destination == route) %>%
       select(
-        `Days Before Departure`, 
-        DailyBookingRate, 
-        BookingRateAccelaration, 
+        `Days Before Departure`,
+        DailyBookingRate,
+        BookingRateAccelaration,
         PercentageTargetReached,
         LF_PercentageTargetReached,
         AvgPickUp
-        ),
+      ),
     by = "Days Before Departure"
-    )
+  )
 
 calib_tbl %>% modeltime_accuracy()
 
-calib_tbl %>% 
+calib_tbl %>%
   modeltime_refit(
     data = train
-    ) %>%
+  ) %>%
   modeltime_forecast(
     new_data = future_data,
     actual_data = train
-      ) %>%
+  ) %>%
   mutate(
     .value = round(.value),
     # .value = ifelse(.value>target_cap, target_cap, round(.value)),
     .conf_lo = round(.conf_lo),
     .conf_hi = round(.conf_hi)
-    ) %>% 
+  ) %>%
   plot_modeltime_forecast(
     .x_lab = "Date before Departure",
     .y_lab = "Seats Sold",
     .title = paste(
       "Booking Curve for", route, "on", dep_date,
       paste("(Target =", target_cap, " seats)", sep = "")
-      )
-      )
+    )
+  )
 ```
-
 
 
 
 
 ```{r}
-min(testing(splits)$`Date Before Departure`)
+forecast_summary <- calib_tbl %>%
+  modeltime_refit(
+    data = train
+  ) %>%
+  modeltime_forecast(
+    new_data = future_data,
+    actual_data = train
+  ) %>%
+  mutate(
+    .value = round(.value),
+    .conf_lo = round(.conf_lo),
+    .conf_hi = round(.conf_hi)
+  ) %>% 
+  filter(
+    .model_desc==c("ACTUAL", "PROPHET W/ REGRESSORS")
+  )
+
+forecast_summary
 ```
+```{r}
+dep_date
+```
+
+
+```{r}
+query <- paste(
+  "This report provides an analysis of the forecasted booking curve for an upcoming flight, 
+  detailing expected demand and commercial implications until departure.\n\n",
+  
+  "Actual seat bookings over time:\n",
+  paste(forecast_summary %>% filter(.key == "actual") %>% pull(.value), collapse = ";"),
+  "Forecasted seat bookings over time:\n",
+  paste(forecast_summary %>% filter(.key == "prediction") %>% pull(.value), collapse = ";"),
+  "\n\nCorresponding dates:\n",
+  paste(forecast_summary %>% filter(.key == "prediction") %>% pull(.index), collapse = ";"),
+  
+  
+  "\n\nThe flight has a target capacity of ", target_cap, " seats.",
+"This analysis focuses on the", route, "route, which has the following historical booking trends:\n\n",
+"- **Days Before Departure:** ",
+  paste(historical_summary %>% filter(Origin_Destination == route) %>% pull(`Days Before Departure`), collapse = ", "),
+  
+  "\n- **Average Pickup Rate (Seats):** ",
+  paste(historical_summary %>% filter(Origin_Destination == route) %>% pull(AvgPickUp), collapse = ", "),
+  
+  "\n- **Daily Booking Rate (Percentage):** ",
+  paste(historical_summary %>% filter(Origin_Destination == route) %>% pull(DailyBookingRate), collapse = ", "),
+  
+  "\n\n**Business Request:**",
+  "Given this forecast and historical trends, please provide a strategic assessment of the booking trajectory, 
+  highlighting potential risks, revenue opportunities and any recommended actions to stimulate demand if it falls short. 
+Also do mention the approximate date (format Month, day, year) when the bookings begin to pick up closer to departure date."
+  )
+
+```
+
+
+
+
+```{r}
+response <- openai::create_chat_completion(
+  model = "gpt-4",
+  messages = list(
+    list(
+      role = "system", 
+      content = "You are an expert data and decision scientist in airline revenue management and commercial strategy."),
+    list(role = "user", content = query)
+  )
+)
+
+
+response$choices$message.content
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
