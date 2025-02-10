@@ -4,7 +4,7 @@
 ---
 
 ## Overview
-This repository contains an **R Shiny** application designed to analyze and forecast airline **booking curves** dynamically. It leverages **time-series forecasting models (ARIMA, Prophet, Modeltime)** to predict seat sales and provides **AI-driven revenue insights** using **OpenAI's API**.
+This repository contains an **R Shiny** application designed to analyze and forecast airline **booking curves** dynamically. It leverages **time-series forecasting models (ARIMA, FB Prophet)** to predict seat sales and provides **AI-driven revenue insights** using **OpenAI's API**.
 
 The application allows users to:
 - **Visualize historical booking trends** for specific routes  
