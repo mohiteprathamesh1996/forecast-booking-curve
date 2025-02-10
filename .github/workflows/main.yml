@@ -62,7 +62,7 @@ jobs:
           secret = Sys.getenv("SHINYAPPS_SECRET")
         )
         rsconnect::deployApp(
-          appName = Sys.getenv("APP_NAME")
+          appName = "forecast-booking-curve"
         )
         
       shell: Rscript {0}
