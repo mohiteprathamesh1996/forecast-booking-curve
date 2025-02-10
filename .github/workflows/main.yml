@@ -61,5 +61,8 @@ jobs:
           token = Sys.getenv("SHINYAPPS_TOKEN"),
           secret = Sys.getenv("SHINYAPPS_SECRET")
         )
-        rsconnect::deployApp()
+        rsconnect::deployApp(
+          appName = Sys.getenv("APP_NAME")
+        )
+        
       shell: Rscript {0}
