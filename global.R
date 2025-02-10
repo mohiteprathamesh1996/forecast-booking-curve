@@ -1,21 +1,21 @@
-# --- Install Required Libraries ---
-# Define the required packages
-required_packages <- c(
-  "rsconnect", "shiny", "dplyr", "ggplot2", "scales", "tidyr", "readr",
-  "forecast", "prophet", "modeltime", "tidymodels", "tidyverse",
-  "timetk", "lubridate", "timeDate", "gridExtra", "mgcv",
-  "plotly", "DT", "openai"
-)
-
-# Identify missing packages
-missing_packages <- required_packages[
-  !(required_packages %in% installed.packages()[, "Package"])
-]
-
-# Install missing packages
-if (length(missing_packages) > 0) {
-  install.packages(missing_packages, dependencies = TRUE)
-}
+# # --- Install Required Libraries ---
+# # Define the required packages
+# required_packages <- c(
+#   "rsconnect", "shiny", "dplyr", "ggplot2", "scales", "tidyr", "readr",
+#   "forecast", "prophet", "modeltime", "tidymodels", "tidyverse",
+#   "timetk", "lubridate", "timeDate", "gridExtra", "mgcv",
+#   "plotly", "DT", "openai"
+# )
+# 
+# # Identify missing packages
+# missing_packages <- required_packages[
+#   !(required_packages %in% installed.packages()[, "Package"])
+# ]
+# 
+# # Install missing packages
+# if (length(missing_packages) > 0) {
+#   install.packages(missing_packages, dependencies = TRUE)
+# }
 
 # --- Load Required Libraries ---
 # These packages are essential for data manipulation, visualization, forecasting, and modeling.
@@ -54,14 +54,32 @@ output <- read.csv("data/output.csv") %>%
   arrange(departure_Date)
 
 # --- Compute Pickup (Seats Left to Sell) ---
-pickup_info <- dataset %>%
-  group_by(Origin_Destination) %>%
+pickup_info_weekend <- dataset %>%
+  group_by(
+    Origin_Destination,
+    WeekendDeparture = ifelse(
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
+        "Thursday",
+        "Friday"
+      ),
+      yes = 1,
+      no = 0
+    )
+  ) %>%
   summarise(
-    across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)), .names = "{.col}")
+    .groups = "drop",
+    across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)), 
+           .names = "{.col}")
   ) %>%
+  ungroup() %>% 
   mutate(
-    across(-c(Origin_Destination, Target), ~ Target - ., .names = "{.col}")
-  ) %>%
+    across(
+      -c(
+        Origin_Destination, 
+        Target, 
+        WeekendDeparture
+      ), 
+      ~ Target - ., .names = "{.col}")) %>%  
   select(-Target) %>%
   pivot_longer(
     cols = starts_with("X"),
@@ -69,7 +87,9 @@ pickup_info <- dataset %>%
     values_to = "AvgPickUp"
   ) %>%
   mutate(
-    `Days Before Departure` = as.numeric(gsub("[^0-9]", "", `Days Before Departure`))
+    `Days Before Departure` = as.numeric(
+      gsub("[^0-9]", "", `Days Before Departure`)
+    )
   ) %>%
   drop_na()
 
@@ -81,21 +101,40 @@ dataset_long <- dataset %>%
     values_to = "Seats Sold"
   ) %>%
   mutate(
-    `Days Before Departure` = as.numeric(gsub("[^0-9]", "", `Days Before Departure`))
+    WeekendDeparture = ifelse(
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
+        "Thursday",
+        "Friday"
+      ),
+      yes = 1,
+      no = 0
+    ),
+    
+    `Days Before Departure` = as.numeric(
+      gsub("[^0-9]", "", `Days Before Departure`)
+    )
   ) %>%
   group_by(departure_Date, Origin_Destination) %>%
   filter(
-    `Days Before Departure` <= max(`Days Before Departure`[!is.na(`Seats Sold`)], na.rm = TRUE)
+    `Days Before Departure` <= max(
+      `Days Before Departure`[!is.na(`Seats Sold`)],
+      na.rm = TRUE
+    )
   ) %>%
   mutate(
-    `Seats Sold` = round(ifelse(is.na(`Seats Sold`),
-      (lead(`Seats Sold`) + lag(`Seats Sold`)) / 2,
-      `Seats Sold`
+    `Seats Sold` = round(ifelse(
+      test = is.na(`Seats Sold`),
+      yes = (lead(`Seats Sold`) + lag(`Seats Sold`)) / 2,
+      no = `Seats Sold`
     ))
   ) %>%
   ungroup() %>%
   group_by(Origin_Destination, departure_Date) %>%
-  arrange(Origin_Destination, departure_Date, `Days Before Departure`) %>%
+  arrange(
+    Origin_Destination,
+    departure_Date,
+    `Days Before Departure`
+  ) %>%
   mutate(
     DailyBookingRate = `Seats Sold` - lead(`Seats Sold`),
     BookingRateAccelaration = DailyBookingRate - lead(DailyBookingRate),
@@ -103,13 +142,18 @@ dataset_long <- dataset %>%
   ) %>%
   ungroup() %>%
   mutate(
-    PercentageTargetReached = ifelse(PercentageTargetReached > 1, 1, PercentageTargetReached)
+    PercentageTargetReached = ifelse(
+      PercentageTargetReached > 1, 1, PercentageTargetReached
+    )
   ) %>%
   arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>%
   group_by(departure_Date, Origin_Destination) %>%
   mutate(LF_PercentageTargetReached = lead(PercentageTargetReached)) %>%
   ungroup() %>%
-  left_join(pickup_info, by = c("Origin_Destination", "Days Before Departure"))
+  left_join(
+    pickup_info_weekend,
+    by = c("Origin_Destination", "Days Before Departure", "WeekendDeparture")
+  )
 
 # --- Reshape Output Data for Forecasting ---
 output_long <- output %>%
@@ -119,21 +163,40 @@ output_long <- output %>%
     values_to = "Seats Sold"
   ) %>%
   mutate(
-    `Days Before Departure` = as.numeric(gsub("[^0-9]", "", `Days Before Departure`))
+    WeekendDeparture = ifelse(
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
+        "Thursday",
+        "Friday"
+      ),
+      yes = 1,
+      no = 0
+    ),
+    
+    `Days Before Departure` = as.numeric(
+      gsub("[^0-9]", "", `Days Before Departure`)
+    )
   ) %>%
   group_by(departure_Date, Origin_Destination) %>%
   filter(
-    `Days Before Departure` >= min(`Days Before Departure`[!is.na(`Seats Sold`)], na.rm = TRUE)
+    `Days Before Departure` >= min(
+      `Days Before Departure`[!is.na(`Seats Sold`)],
+      na.rm = TRUE
+    )
   ) %>%
   mutate(
-    `Seats Sold` = round(ifelse(is.na(`Seats Sold`),
-      (lead(`Seats Sold`) + lag(`Seats Sold`)) / 2,
-      `Seats Sold`
+    `Seats Sold` = round(ifelse(
+      test = is.na(`Seats Sold`),
+      yes = (lead(`Seats Sold`) + lag(`Seats Sold`)) / 2,
+      no = `Seats Sold`
     ))
   ) %>%
   ungroup() %>%
   group_by(Origin_Destination, departure_Date) %>%
-  arrange(Origin_Destination, departure_Date, `Days Before Departure`) %>%
+  arrange(
+    Origin_Destination,
+    departure_Date,
+    `Days Before Departure`
+  ) %>%
   mutate(
     DailyBookingRate = `Seats Sold` - lead(`Seats Sold`),
     BookingRateAccelaration = DailyBookingRate - lead(DailyBookingRate),
@@ -141,14 +204,19 @@ output_long <- output %>%
   ) %>%
   ungroup() %>%
   mutate(
-    PercentageTargetReached = ifelse(PercentageTargetReached > 1, 1, PercentageTargetReached)
+    PercentageTargetReached = ifelse(
+      PercentageTargetReached > 1, 1, PercentageTargetReached
+    )
   ) %>%
   arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>%
   group_by(departure_Date, Origin_Destination) %>%
   mutate(LF_PercentageTargetReached = lead(PercentageTargetReached)) %>%
   ungroup() %>%
   drop_na() %>%
-  left_join(pickup_info, by = c("Origin_Destination", "Days Before Departure"))
+  left_join(
+    pickup_info_weekend,
+    by = c("Origin_Destination", "Days Before Departure", "WeekendDeparture")
+  )
 
 # --- Generate General Historical Summary Statistics ---
 historical_summary <- dataset_long %>%
