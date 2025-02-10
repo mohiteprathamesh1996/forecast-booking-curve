@@ -18,6 +18,7 @@ library(gridExtra)    # Arrange multiple ggplot2 plots
 library(mgcv)         # Generalized additive models
 library(plotly)       # Interactive visualizations
 library(DT)           # Interactive data tables
+library(openai)
 
 # --- Load API Key for AI-Generated Insights ---
 openai_api_key <- Sys.getenv("OPENAI_API_KEY")  # Retrieve API key securely
