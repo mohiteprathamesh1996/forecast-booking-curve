@@ -13,6 +13,8 @@ The application allows users to:
 - **Assess model performance** with accuracy metrics  
 - **Generate AI-based commercial insights** for revenue management  
 
+🔗 The app is now live at [Flight Booking Curve](https://prathameshmohite.shinyapps.io/flight-booking-curve/)
+
 ---
 
 ## Features
