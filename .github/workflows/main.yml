@@ -1,17 +1,20 @@
 name: Deploy Shiny App
 
 on:
-  workflow_dispatch: 
+  push:
+    branches:
+      - master  # Runs on push to master
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # ✅ Install system dependencies (Fixes libcurl error)
+
     - name: Install system dependencies
       run: |
         sudo apt-get update
@@ -35,15 +38,11 @@ jobs:
         install.packages("readr")
         install.packages("lubridate")
         install.packages("openai")
-        
-        # ✅ Install forecasting & modeling packages
         install.packages("forecast")
         install.packages("prophet")
         install.packages("modeltime")
         install.packages("tidymodels")
         install.packages("timetk")
-
-        # ✅ Install additional dependencies
         install.packages("scales")
         install.packages("timeDate")
         install.packages("gridExtra")
