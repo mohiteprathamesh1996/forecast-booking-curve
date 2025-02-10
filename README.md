@@ -81,7 +81,8 @@ rsconnect::deployApp()
 This project is licensed under the MIT License.
 
 ## Contributors
-Your Name – Data Scientist, Shiny Developer
+Prathamesh Mohite – Data Scientist, Shiny Developer
+
 Email: your.email@example.com
 
 ## Support & Feedback
