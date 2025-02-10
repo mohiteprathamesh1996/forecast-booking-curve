@@ -68,6 +68,7 @@ install.packages(c(
   "forecast", "prophet", "modeltime", "lubridate",
   "timetk", "timeDate", "gridExtra", "DT"
 ))
+```
 
 ### 3. Run app.R
 Open appp.R and run the following command:
