@@ -67,7 +67,15 @@ ui <- fluidPage(
 
       # --- Forecast Plot ---
       # Displays the forecasted booking curve (Interactive Plotly).
-      div(plotlyOutput("forecast_plot"), style = "width: 90%; margin: auto;"),
+      # div(plotlyOutput("forecast_plot"), style = "width: 90%; margin: auto;"),
+      div(
+        plotlyOutput(
+          "forecast_plot", 
+          width = "1550px", 
+          # height = "600px"
+          ), 
+        style = "width: 95%; margin: auto;"
+        ),
 
       # --- Historical Trends Title ---
       # Dynamically updates based on the selected flight sector.
