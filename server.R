@@ -1,22 +1,21 @@
 server <- function(input, output) {
-  
   # --- Reactive Expression: Filter Dataset Based on User Selection ---
   # This ensures the user has selected a departure date and route before filtering.
   filtered_data <- reactive({
-    req(input$dep_date, input$route)  # Ensure required inputs are provided
-    
+    req(input$dep_date, input$route) # Ensure required inputs are provided
+
     output_long %>%
       filter(
-        departure_Date == as.Date(input$dep_date) &  # Match selected departure date
-          Origin_Destination == input$route  # Match selected route
+        departure_Date == as.Date(input$dep_date) & # Match selected departure date
+          Origin_Destination == input$route # Match selected route
       )
   })
-  
+
   # --- Dynamic UI: Historical Trends Title ---
   # This dynamically generates the title based on user-selected route.
   output$historical_title <- renderUI({
-    req(input$route)  # Ensure a route is selected
-    
+    req(input$route) # Ensure a route is selected
+
     h3(
       paste(
         "Historical Trends Along",
@@ -25,9 +24,9 @@ server <- function(input, output) {
       )
     )
   })
-  
+
   # --- Generate Historical Trend Plots ---
-  # This creates two line plots: 
+  # This creates two line plots:
   # 1. Average Pickup (Seats Sold)
   # 2. Daily Booking Rate
   # The `grid.arrange()` function arranges them in a single view.
@@ -42,9 +41,8 @@ server <- function(input, output) {
             y = AvgPickUp
           )
         ) +
-        geom_line(na.rm = TRUE, color = "#D71920", size = 0.8) +  # Red line for visual emphasis
+        geom_line(na.rm = TRUE, color = "#D71920", size = 0.8) + # Red line for visual emphasis
         theme_bw(),
-      
       historical_summary %>%
         filter(Origin_Destination == input$route) %>%
         mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
@@ -54,20 +52,20 @@ server <- function(input, output) {
             y = DailyBookingRate
           )
         ) +
-        geom_line(na.rm = TRUE, color = "darkgreen", size = 0.8) +  # Green line for contrast
+        geom_line(na.rm = TRUE, color = "darkgreen", size = 0.8) + # Green line for contrast
         theme_bw()
     )
   })
-  
+
   # --- Forecasting Model for Seat Sales ---
   # This section builds predictive models (ARIMA & Prophet) based on past booking data.
   output$forecast_plot <- renderPlotly({
-    req(filtered_data())  # Ensure filtered dataset is available
-    
+    req(filtered_data()) # Ensure filtered dataset is available
+
     # Capture user inputs
     dep_date <- as.character(input$dep_date)
     route <- input$route
-    
+
     # --- Prepare Training Data ---
     train <- filtered_data() %>%
       mutate(
@@ -81,39 +79,39 @@ server <- function(input, output) {
         AvgPickUp
       ) %>%
       arrange(`Date Before Departure`) %>%
-      drop_na()  # Remove missing values
-    
+      drop_na() # Remove missing values
+
     # Keep the most recent data based on the user-selected training percentage
     train <- train %>%
       arrange(`Date Before Departure`) %>%
       tail(round(
         ((input$top_n_train) / 100) * nrow(train)
       ))
-    
+
     # --- Extract Forecasting Parameters ---
     target_cap <- filtered_data() %>%
       pull(Target) %>%
       unique()
-    
+
     days_ahead <- filtered_data() %>%
       pull(`Days Before Departure`) %>%
-      min()  # Find the minimum "Days Before Departure" for forecasting
-    
+      min() # Find the minimum "Days Before Departure" for forecasting
+
     # --- Time Series Split for Model Training ---
     splits <- time_series_split(
       data = train,
-      assess = round(((input$test_slice) / 100) * nrow(train)),  # Define test data size
+      assess = round(((input$test_slice) / 100) * nrow(train)), # Define test data size
       cumulative = TRUE
     )
-    
-    test_start_date <- min(testing(splits)$`Date Before Departure`)  # Identify test start date
-    
+
+    test_start_date <- min(testing(splits)$`Date Before Departure`) # Identify test start date
+
     # --- Model Definitions ---
     # 1. ARIMA Model
     model_arima <- arima_reg() %>%
       set_engine("auto_arima") %>%
       fit(`Seats Sold` ~ `Date Before Departure`, training(splits))
-    
+
     # 2. Prophet Model (Logistic Growth)
     model_prophet <- prophet_reg(
       growth = "logistic",
@@ -121,7 +119,7 @@ server <- function(input, output) {
     ) %>%
       set_engine("prophet") %>%
       fit(`Seats Sold` ~ `Date Before Departure`, training(splits))
-    
+
     # 3. Prophet Model with Additional Regressors
     model_prophet_with_reg <- prophet_reg(
       growth = "logistic",
@@ -137,17 +135,17 @@ server <- function(input, output) {
           AvgPickUp,
         training(splits)
       )
-    
+
     # --- Model Calibration & Accuracy Assessment ---
     model_tbl <- modeltime_table(
       model_arima,
       model_prophet,
       model_prophet_with_reg
     )
-    
+
     calib_tbl <- model_tbl %>%
       modeltime_calibrate(testing(splits))
-    
+
     # --- Display Model Accuracy in a Table ---
     output$accuracy_table <- renderDT({
       calib_tbl %>%
@@ -163,7 +161,7 @@ server <- function(input, output) {
           options = list(pageLength = 5, autoWidth = TRUE)
         )
     })
-    
+
     # --- Generate Future Forecast Data ---
     future_data <- future_frame(
       .data = train,
@@ -176,17 +174,30 @@ server <- function(input, output) {
         )
       ) %>%
       left_join(
-        historical_summary %>%
+        historical_summary_weekend %>%
+          filter(
+            WeekendDeparture == ifelse(
+              test = wday(
+                dep_date,
+                label = TRUE,
+                abbr = FALSE
+              ) %in% c("Friday", "Saturday"),
+              yes = 1,
+              no = 0
+            )
+          ) %>%
           filter(Origin_Destination == route) %>%
           select(
             `Days Before Departure`,
             DailyBookingRate,
+            BookingRateAccelaration,
+            PercentageTargetReached,
             LF_PercentageTargetReached,
             AvgPickUp
           ),
         by = "Days Before Departure"
       )
-    
+
     # --- Generate AI Insights (OpenAI API Call) ---
     output$ai_insights <- renderUI({
       # Extract forecasted seat bookings
@@ -206,7 +217,7 @@ server <- function(input, output) {
         filter(
           .model_desc == c("ACTUAL", "PROPHET W/ REGRESSORS")
         )
-      
+
       # Construct AI query
       query <- paste(
         "This report provides an analysis of the forecasted booking curve for an upcoming flight,
@@ -255,7 +266,7 @@ server <- function(input, output) {
         facts and avoid making text bold. Return paragarph without bullet
         points. Avoid using the word I and say 'we' instead."
       )
-      
+
       # Send query to OpenAI
       response <- openai::create_chat_completion(
         model = "gpt-4",
@@ -268,18 +279,18 @@ server <- function(input, output) {
           list(role = "user", content = query)
         )
       )
-      
+
       # Extract AI-generated insights
       insights <- response$choices$message.content
-      
+
       formatted_insights <- paste(
         "<p>", insights, "</p>",
         sep = ""
       )
-      
+
       HTML(formatted_insights)
     })
-    
+
     # --- Generate Forecast Plot ---
     forecast_plot <- calib_tbl %>%
       modeltime_refit(data = train) %>%
@@ -298,12 +309,12 @@ server <- function(input, output) {
         .title = paste(
           "Booking Curve for", route, "on", dep_date,
           paste("[Target =", target_cap, " seats; Train Obs = ", nrow(train),
-                "; ", "Predict days = ", days_ahead, "]",
-                sep = ""
+            "; ", "Predict days = ", days_ahead, "]",
+            sep = ""
           )
         )
       )
-    
+
     # Convert GGPlot to Interactive Plotly Graph
     ggplotly(forecast_plot) %>%
       layout(

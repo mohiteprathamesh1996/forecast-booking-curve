@@ -52,6 +52,45 @@ pickup_info <- dataset %>%
   ) %>%
   drop_na()
 
+pickup_info_weekend <- dataset %>%
+  group_by(
+    Origin_Destination,
+    WeekendDeparture = ifelse(
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
+        "Thursday",
+        "Friday"
+      ),
+      yes = 1,
+      no = 0
+    )
+    ) %>%
+  summarise(
+    .groups = "drop",
+    across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)), 
+           .names = "{.col}")
+    ) %>%
+  ungroup() %>% 
+  mutate(
+    across(
+      -c(
+        Origin_Destination, 
+        Target, 
+        WeekendDeparture
+        ), 
+      ~ Target - ., .names = "{.col}")) %>%  
+  select(-Target) %>%
+  pivot_longer(
+    cols = starts_with("X"),
+    names_to = "Days Before Departure",
+    values_to = "AvgPickUp"
+  ) %>%
+  mutate(
+    `Days Before Departure` = as.numeric(
+      gsub("[^0-9]", "", `Days Before Departure`)
+    )
+  ) %>%
+  drop_na()
+
 # Reshaped dataset in long format for time-series analysis
 dataset_long <- dataset %>%
   pivot_longer(
@@ -60,6 +99,15 @@ dataset_long <- dataset %>%
     values_to = "Seats Sold"
   ) %>%
   mutate(
+    WeekendDeparture = ifelse(
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
+        "Thursday",
+        "Friday"
+      ),
+      yes = 1,
+      no = 0
+    ),
+    
     `Days Before Departure` = as.numeric(
       gsub("[^0-9]", "", `Days Before Departure`)
     )
@@ -101,8 +149,8 @@ dataset_long <- dataset %>%
   mutate(LF_PercentageTargetReached = lead(PercentageTargetReached)) %>%
   ungroup() %>%
   left_join(
-    pickup_info,
-    by = c("Origin_Destination", "Days Before Departure")
+    pickup_info_weekend,
+    by = c("Origin_Destination", "Days Before Departure", "WeekendDeparture")
   )
 
 output_long <- output %>%
@@ -112,6 +160,15 @@ output_long <- output %>%
     values_to = "Seats Sold"
   ) %>%
   mutate(
+    WeekendDeparture = ifelse(
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
+        "Thursday",
+        "Friday"
+      ),
+      yes = 1,
+      no = 0
+    ),
+    
     `Days Before Departure` = as.numeric(
       gsub("[^0-9]", "", `Days Before Departure`)
     )
@@ -154,8 +211,8 @@ output_long <- output %>%
   ungroup() %>%
   drop_na() %>%
   left_join(
-    pickup_info,
-    by = c("Origin_Destination", "Days Before Departure")
+    pickup_info_weekend,
+    by = c("Origin_Destination", "Days Before Departure", "WeekendDeparture")
   )
 
 historical_summary <- dataset_long %>%
@@ -176,14 +233,53 @@ historical_summary <- dataset_long %>%
 
 
 
+
+```{r}
+pickup_info_weekend <- dataset %>%
+  group_by(
+    Origin_Destination,
+    WeekendDeparture = ifelse(
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
+        "Thursday",
+        "Friday"
+      ),
+      yes = 1,
+      no = 0
+    )
+    ) %>%
+  summarise(
+    .groups = "drop",
+    across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)), 
+           .names = "{.col}")
+    ) %>%
+  ungroup() %>% 
+  mutate(across(-c(Origin_Destination, Target, WeekendDeparture), ~ Target - ., .names = "{.col}")) %>%  
+  select(-Target) %>%
+  pivot_longer(
+    cols = starts_with("X"),
+    names_to = "Days Before Departure",
+    values_to = "AvgPickUp"
+  ) %>%
+  mutate(
+    `Days Before Departure` = as.numeric(
+      gsub("[^0-9]", "", `Days Before Departure`)
+    )
+  ) %>%
+  drop_na()
+```
+
+
+
+
+
 ```{r, fig.width=12, fig.height=4}
-historical_summary_weekend <- dataset_long %>% 
+historical_summary_weekend <- dataset_long %>%
   mutate(
     WeekendDeparture = ifelse(
       test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
-        "Thursday", 
+        "Thursday",
         "Friday"
-        ),
+      ),
       yes = 1,
       no = 0
     )
@@ -203,9 +299,9 @@ historical_summary_weekend <- dataset_long %>%
 
 historical_summary_weekend %>%
   filter(
-    Origin_Destination=="DXB-XXX" &
-      WeekendDeparture==1
-    ) %>% 
+    Origin_Destination == "DXB-XXX" &
+      WeekendDeparture == 1
+  ) %>%
   mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
   ggplot(
     aes(
@@ -218,9 +314,9 @@ historical_summary_weekend %>%
 
 historical_summary_weekend %>%
   filter(
-    Origin_Destination=="DXB-XXX" &
-      WeekendDeparture==1
-    ) %>% 
+    Origin_Destination == "DXB-XXX" &
+      WeekendDeparture == 1
+  ) %>%
   mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
   ggplot(
     aes(
@@ -235,9 +331,9 @@ historical_summary_weekend %>%
 ```{r, fig.width=12, fig.height=4}
 historical_summary_weekend %>%
   filter(
-    Origin_Destination=="DXB-XXX" &
-      WeekendDeparture==0
-    ) %>% 
+    Origin_Destination == "DXB-XXX" &
+      WeekendDeparture == 0
+  ) %>%
   mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
   ggplot(
     aes(
@@ -250,9 +346,9 @@ historical_summary_weekend %>%
 
 historical_summary_weekend %>%
   filter(
-    Origin_Destination=="DXB-XXX" &
-      WeekendDeparture==0
-    ) %>% 
+    Origin_Destination == "DXB-XXX" &
+      WeekendDeparture == 0
+  ) %>%
   mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
   ggplot(
     aes(
@@ -327,26 +423,26 @@ wday(dep_date, label = TRUE, abbr = FALSE) %in% c("Friday", "Saturday")
 
 ```{r}
 ifelse(
-  test=wday(dep_date, label = TRUE, abbr = FALSE) %in% c("Friday", "Saturday"), 
-  yes = 1, 
+  test = wday(dep_date, label = TRUE, abbr = FALSE) %in% c("Friday", "Saturday"),
+  yes = 1,
   no = 0
-  )
+)
 ```
 
 
 ```{r}
-historical_summary_weekend %>% 
+historical_summary_weekend %>%
   filter(
-    WeekendDeparture==ifelse(
+    WeekendDeparture == ifelse(
       test = wday(
-        dep_date, 
-        label = TRUE, 
+        dep_date,
+        label = TRUE,
         abbr = FALSE
-        ) %in% c("Friday", "Saturday"),
+      ) %in% c("Friday", "Saturday"),
       yes = 1,
       no = 0
-      )
     )
+  )
 ```
 
 
@@ -457,18 +553,18 @@ future_data <- future_frame(
     )
   ) %>%
   left_join(
-    historical_summary_weekend %>% 
-  filter(
-    WeekendDeparture==ifelse(
-      test = wday(
-        dep_date, 
-        label = TRUE, 
-        abbr = FALSE
-        ) %in% c("Friday", "Saturday"),
-      yes = 1,
-      no = 0
-      )
-    ) %>%
+    historical_summary_weekend %>%
+      filter(
+        WeekendDeparture == ifelse(
+          test = wday(
+            dep_date,
+            label = TRUE,
+            abbr = FALSE
+          ) %in% c("Friday", "Saturday"),
+          yes = 1,
+          no = 0
+        )
+      ) %>%
       filter(Origin_Destination == route) %>%
       select(
         `Days Before Departure`,

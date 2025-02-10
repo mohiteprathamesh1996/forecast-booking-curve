@@ -19,28 +19,28 @@ if (length(missing_packages) > 0) {
 
 # --- Load Required Libraries ---
 # These packages are essential for data manipulation, visualization, forecasting, and modeling.
-library(shiny)        # Shiny web framework
-library(dplyr)        # Data manipulation
-library(ggplot2)      # Data visualization
-library(scales)       # Scaling functions for ggplot2
-library(tidyr)        # Data reshaping
-library(readr)        # Reading CSV files
-library(forecast)     # Time series forecasting
-library(prophet)      # Facebook Prophet for forecasting
-library(modeltime)    # Time series modeling
-library(tidymodels)   # Machine learning framework
-library(tidyverse)    # Collection of R packages for data science
-library(timetk)       # Time series feature engineering
-library(lubridate)    # Working with date/time objects
-library(timeDate)     # Date/time computations
-library(gridExtra)    # Arrange multiple ggplot2 plots
-library(mgcv)         # Generalized additive models
-library(plotly)       # Interactive visualizations
-library(DT)           # Interactive data tables
+library(shiny) # Shiny web framework
+library(dplyr) # Data manipulation
+library(ggplot2) # Data visualization
+library(scales) # Scaling functions for ggplot2
+library(tidyr) # Data reshaping
+library(readr) # Reading CSV files
+library(forecast) # Time series forecasting
+library(prophet) # Facebook Prophet for forecasting
+library(modeltime) # Time series modeling
+library(tidymodels) # Machine learning framework
+library(tidyverse) # Collection of R packages for data science
+library(timetk) # Time series feature engineering
+library(lubridate) # Working with date/time objects
+library(timeDate) # Date/time computations
+library(gridExtra) # Arrange multiple ggplot2 plots
+library(mgcv) # Generalized additive models
+library(plotly) # Interactive visualizations
+library(DT) # Interactive data tables
 library(openai)
 
 # --- Load API Key for AI-Generated Insights ---
-openai_api_key <- Sys.getenv("OPENAI_API_KEY")  # Retrieve API key securely
+openai_api_key <- Sys.getenv("OPENAI_API_KEY") # Retrieve API key securely
 
 # --- Load Datasets ---
 # 1. Historical Booking Data (Past flights)
@@ -88,9 +88,10 @@ dataset_long <- dataset %>%
     `Days Before Departure` <= max(`Days Before Departure`[!is.na(`Seats Sold`)], na.rm = TRUE)
   ) %>%
   mutate(
-    `Seats Sold` = round(ifelse(is.na(`Seats Sold`), 
-                                (lead(`Seats Sold`) + lag(`Seats Sold`)) / 2, 
-                                `Seats Sold`))
+    `Seats Sold` = round(ifelse(is.na(`Seats Sold`),
+      (lead(`Seats Sold`) + lag(`Seats Sold`)) / 2,
+      `Seats Sold`
+    ))
   ) %>%
   ungroup() %>%
   group_by(Origin_Destination, departure_Date) %>%
@@ -125,9 +126,10 @@ output_long <- output %>%
     `Days Before Departure` >= min(`Days Before Departure`[!is.na(`Seats Sold`)], na.rm = TRUE)
   ) %>%
   mutate(
-    `Seats Sold` = round(ifelse(is.na(`Seats Sold`), 
-                                (lead(`Seats Sold`) + lag(`Seats Sold`)) / 2, 
-                                `Seats Sold`))
+    `Seats Sold` = round(ifelse(is.na(`Seats Sold`),
+      (lead(`Seats Sold`) + lag(`Seats Sold`)) / 2,
+      `Seats Sold`
+    ))
   ) %>%
   ungroup() %>%
   group_by(Origin_Destination, departure_Date) %>%
@@ -163,11 +165,11 @@ historical_summary <- dataset_long %>%
   drop_na()
 
 # --- Generate Weekend/Weekday Based Historical Summary Statistics ---
-historical_summary_weekend <- dataset_long %>% 
+historical_summary_weekend <- dataset_long %>%
   mutate(
     WeekendDeparture = ifelse(
       test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
-        "Thursday", 
+        "Thursday",
         "Friday"
       ),
       yes = 1,
@@ -187,5 +189,5 @@ historical_summary_weekend <- dataset_long %>%
   drop_na()
 
 # --- Extract Unique Departure Dates and Routes for Dropdowns ---
-departure_dates <- unique(output_long$departure_Date)  # Unique departure dates
-routes <- unique(output_long$Origin_Destination)  # Unique flight routes
+departure_dates <- unique(output_long$departure_Date) # Unique departure dates
+routes <- unique(output_long$Origin_Destination) # Unique flight routes
