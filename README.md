@@ -90,5 +90,7 @@ Prathamesh Mohite – Data Scientist
 
 ## Support & Feedback
 If you have questions or feedback, open an issue or reach out.
+
 Email: mohite.p@northeastern.edu
+
 [LinkedIn Profile](https://www.linkedin.com/in/prathameshmohite96/)
