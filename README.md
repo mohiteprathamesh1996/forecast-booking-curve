@@ -42,4 +42,35 @@ The application allows users to:
 ---
 
 ## Project Structure
-📦 Project Root │-- 📁 data/ │ ├── dataset.csv # Historical booking data │ ├── output.csv # Flights requiring forecasting │-- 📁 R/ │ ├── server.R # Backend logic (data filtering, forecasting models, AI insights) │ ├── ui.R # User interface layout │ ├── global.R # Load datasets and preprocess data │-- 📁 www/ │ ├── style.css # Custom styles (if any) │-- .github/workflows/ │ ├── deploy.yml # GitHub Actions for automatic deployment │-- 📄 README.md # Project documentation
+Project Root 
+│-- data/ │ 
+  ├── dataset.csv # Historical booking data │ 
+  ├── output.csv # Flights requiring forecasting 
+│── server.R # Backend logic (data filtering, forecasting models, AI insights) │ 
+├── ui.R # User interface layout │ 
+├── global.R # Load datasets and preprocess data 
+│-- .github/workflows/ │ 
+├── deploy.yml # GitHub Actions for automatic deployment 
+│-- README.md # Project documentation
+
+
+## Installation & Setup
+### 1. Clone repository
+```
+git clone https://github.com/mohiteprathamesh1996/forecast-booking-curve.git
+```
+
+### 2. Install Required R Packages
+Open RStudio and run:
+```r
+install.packages(c(
+  "shiny", "dplyr", "ggplot2", "plotly", "tidyverse",
+  "forecast", "prophet", "modeltime", "lubridate",
+  "timetk", "timeDate", "gridExtra", "DT"
+))
+
+### 3. Run app.R
+Open appp.R and run the following command:
+```r
+shiny::runApp()
+```
