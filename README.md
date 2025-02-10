@@ -42,16 +42,7 @@ The application allows users to:
 ---
 
 ## Project Structure
-Project Root 
-│-- data/ │ 
-  ├── dataset.csv # Historical booking data │ 
-  ├── output.csv # Flights requiring forecasting 
-│── server.R # Backend logic (data filtering, forecasting models, AI insights) │ 
-├── ui.R # User interface layout │ 
-├── global.R # Load datasets and preprocess data 
-│-- .github/workflows/ │ 
-├── deploy.yml # GitHub Actions for automatic deployment 
-│-- README.md # Project documentation
+📦 Project Root ├── data/ │ ├── dataset.csv # Historical booking data │ ├── output.csv # Flights requiring forecasting ├── server.R # Backend logic (data filtering, forecasting models, AI insights) ├── ui.R # User interface layout ├── global.R # Load datasets and preprocess data ├── .github/workflows/ │ ├── deploy.yml # GitHub Actions for automatic deployment ├── README.md # Project documentation
 
 
 ## Installation & Setup
