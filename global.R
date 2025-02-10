@@ -1,3 +1,11 @@
+# --- Install Required Libraries ---
+install.packages(c(
+  "shiny", "dplyr", "ggplot2", "scales", "tidyr", "readr",
+  "forecast", "prophet", "modeltime", "tidymodels", "tidyverse",
+  "timetk", "lubridate", "timeDate", "gridExtra", "mgcv",
+  "plotly", "DT", "openai"
+))
+
 # --- Load Required Libraries ---
 # These packages are essential for data manipulation, visualization, forecasting, and modeling.
 library(shiny)        # Shiny web framework
