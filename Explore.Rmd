@@ -227,6 +227,7 @@ grid.arrange(
 dep_date <- "2023-03-10"
 route <- "DXB-XXX"
 
+
 train <- output_long %>%
   filter(
     departure_Date == dep_date &
@@ -383,12 +384,14 @@ forecast_summary <- calib_tbl %>%
     .value = round(.value),
     .conf_lo = round(.conf_lo),
     .conf_hi = round(.conf_hi)
-  ) %>% 
+  ) %>%
   filter(
-    .model_desc==c("ACTUAL", "PROPHET W/ REGRESSORS")
+    .model_desc == c("ACTUAL", "PROPHET W/ REGRESSORS")
   )
 
-forecast_summary
+forecast_summary %>%
+  filter(.key == "actual") %>%
+  arrange(.index)
 ```
 ```{r}
 dep_date
@@ -397,34 +400,27 @@ dep_date
 
 ```{r}
 query <- paste(
-  "This report provides an analysis of the forecasted booking curve for an upcoming flight, 
+  "This report provides an analysis of the forecasted booking curve for an upcoming flight,
   detailing expected demand and commercial implications until departure.\n\n",
-  
   "Actual seat bookings over time:\n",
   paste(forecast_summary %>% filter(.key == "actual") %>% pull(.value), collapse = ";"),
   "Forecasted seat bookings over time:\n",
   paste(forecast_summary %>% filter(.key == "prediction") %>% pull(.value), collapse = ";"),
   "\n\nCorresponding dates:\n",
   paste(forecast_summary %>% filter(.key == "prediction") %>% pull(.index), collapse = ";"),
-  
-  
   "\n\nThe flight has a target capacity of ", target_cap, " seats.",
-"This analysis focuses on the", route, "route, which has the following historical booking trends:\n\n",
-"- **Days Before Departure:** ",
+  "This analysis focuses on the", route, "route, which has the following historical booking trends:\n\n",
+  "- **Days Before Departure:** ",
   paste(historical_summary %>% filter(Origin_Destination == route) %>% pull(`Days Before Departure`), collapse = ", "),
-  
   "\n- **Average Pickup Rate (Seats):** ",
   paste(historical_summary %>% filter(Origin_Destination == route) %>% pull(AvgPickUp), collapse = ", "),
-  
   "\n- **Daily Booking Rate (Percentage):** ",
   paste(historical_summary %>% filter(Origin_Destination == route) %>% pull(DailyBookingRate), collapse = ", "),
-  
   "\n\n**Business Request:**",
-  "Given this forecast and historical trends, please provide a strategic assessment of the booking trajectory, 
-  highlighting potential risks, revenue opportunities and any recommended actions to stimulate demand if it falls short. 
+  "Given this forecast and historical trends, please provide a strategic assessment of the booking trajectory,
+  highlighting potential risks, revenue opportunities and any recommended actions to stimulate demand if it falls short.
 Also do mention the approximate date (format Month, day, year) when the bookings begin to pick up closer to departure date."
-  )
-
+)
 ```
 
 
@@ -435,8 +431,9 @@ response <- openai::create_chat_completion(
   model = "gpt-4",
   messages = list(
     list(
-      role = "system", 
-      content = "You are an expert data and decision scientist in airline revenue management and commercial strategy."),
+      role = "system",
+      content = "You are an expert data and decision scientist in airline revenue management and commercial strategy."
+    ),
     list(role = "user", content = query)
   )
 )
