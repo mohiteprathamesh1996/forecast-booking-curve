@@ -83,8 +83,6 @@ This project is licensed under the MIT License.
 ## Contributors
 Prathamesh Mohite – Data Scientist, Shiny Developer
 
-Email: your.email@example.com
-
 ## Support & Feedback
 If you have questions or feedback, open an issue or reach out.
 Email: mohite.p@northeastern.edu
