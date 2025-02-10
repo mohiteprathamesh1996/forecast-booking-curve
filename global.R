@@ -1,10 +1,21 @@
 # --- Install Required Libraries ---
-install.packages(c(
-  "shiny", "dplyr", "ggplot2", "scales", "tidyr", "readr",
+# Define the required packages
+required_packages <- c(
+  "rsconnect", "shiny", "dplyr", "ggplot2", "scales", "tidyr", "readr",
   "forecast", "prophet", "modeltime", "tidymodels", "tidyverse",
   "timetk", "lubridate", "timeDate", "gridExtra", "mgcv",
   "plotly", "DT", "openai"
-))
+)
+
+# Identify missing packages
+missing_packages <- required_packages[
+  !(required_packages %in% installed.packages()[, "Package"])
+]
+
+# Install missing packages
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages, dependencies = TRUE)
+}
 
 # --- Load Required Libraries ---
 # These packages are essential for data manipulation, visualization, forecasting, and modeling.
