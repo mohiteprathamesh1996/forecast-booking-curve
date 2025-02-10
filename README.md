@@ -76,14 +76,15 @@ Open appp.R and run the following command:
 rsconnect::deployApp()
 ```
 
-License
+---
+## License
 This project is licensed under the MIT License.
 
-Contributors
+## Contributors
 Your Name – Data Scientist, Shiny Developer
 Email: your.email@example.com
 
-Support & Feedback
+## Support & Feedback
 If you have questions or feedback, open an issue or reach out.
 Email: mohite.p@northeastern.edu
 [LinkedIn Profile](https://www.linkedin.com/in/prathameshmohite96/)
