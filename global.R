@@ -6,12 +6,12 @@
 #   "timetk", "lubridate", "timeDate", "gridExtra", "mgcv",
 #   "plotly", "DT", "openai"
 # )
-# 
+#
 # # Identify missing packages
 # missing_packages <- required_packages[
 #   !(required_packages %in% installed.packages()[, "Package"])
 # ]
-# 
+#
 # # Install missing packages
 # if (length(missing_packages) > 0) {
 #   install.packages(missing_packages, dependencies = TRUE)
@@ -54,32 +54,39 @@ output <- read.csv("data/output.csv") %>%
   arrange(departure_Date)
 
 # --- Compute Pickup (Seats Left to Sell) ---
+weekend_definition <- c("Friday", "Saturday")
+
 pickup_info_weekend <- dataset %>%
   group_by(
     Origin_Destination,
     WeekendDeparture = ifelse(
-      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
-        "Thursday",
-        "Friday"
-      ),
+      test = wday(
+        departure_Date,
+        label = TRUE,
+        abbr = FALSE
+      ) %in% weekend_definition,
       yes = 1,
       no = 0
     )
   ) %>%
   summarise(
     .groups = "drop",
-    across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)), 
-           .names = "{.col}")
+    across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)),
+      .names = "{.col}"
+    )
   ) %>%
-  ungroup() %>% 
+  ungroup() %>%
   mutate(
     across(
       -c(
-        Origin_Destination, 
-        Target, 
+        Origin_Destination,
+        Target,
         WeekendDeparture
-      ), 
-      ~ Target - ., .names = "{.col}")) %>%  
+      ),
+      ~ Target - .,
+      .names = "{.col}"
+    )
+  ) %>%
   select(-Target) %>%
   pivot_longer(
     cols = starts_with("X"),
@@ -102,14 +109,14 @@ dataset_long <- dataset %>%
   ) %>%
   mutate(
     WeekendDeparture = ifelse(
-      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
-        "Thursday",
-        "Friday"
-      ),
+      test = wday(
+        departure_Date,
+        label = TRUE,
+        abbr = FALSE
+      ) %in% weekend_definition,
       yes = 1,
       no = 0
     ),
-    
     `Days Before Departure` = as.numeric(
       gsub("[^0-9]", "", `Days Before Departure`)
     )
@@ -164,14 +171,14 @@ output_long <- output %>%
   ) %>%
   mutate(
     WeekendDeparture = ifelse(
-      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
-        "Thursday",
-        "Friday"
-      ),
+      test = wday(
+        departure_Date,
+        label = TRUE,
+        abbr = FALSE
+      ) %in% weekend_definition,
       yes = 1,
       no = 0
     ),
-    
     `Days Before Departure` = as.numeric(
       gsub("[^0-9]", "", `Days Before Departure`)
     )
@@ -236,10 +243,11 @@ historical_summary <- dataset_long %>%
 historical_summary_weekend <- dataset_long %>%
   mutate(
     WeekendDeparture = ifelse(
-      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
-        "Thursday",
-        "Friday"
-      ),
+      test = wday(
+        departure_Date,
+        label = TRUE,
+        abbr = FALSE
+      ) %in% weekend_definition,
       yes = 1,
       no = 0
     )

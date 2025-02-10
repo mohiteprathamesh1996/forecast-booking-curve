@@ -63,21 +63,25 @@ pickup_info_weekend <- dataset %>%
       yes = 1,
       no = 0
     )
-    ) %>%
+  ) %>%
   summarise(
     .groups = "drop",
-    across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)), 
-           .names = "{.col}")
-    ) %>%
-  ungroup() %>% 
+    across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)),
+      .names = "{.col}"
+    )
+  ) %>%
+  ungroup() %>%
   mutate(
     across(
       -c(
-        Origin_Destination, 
-        Target, 
+        Origin_Destination,
+        Target,
         WeekendDeparture
-        ), 
-      ~ Target - ., .names = "{.col}")) %>%  
+      ),
+      ~ Target - .,
+      .names = "{.col}"
+    )
+  ) %>%
   select(-Target) %>%
   pivot_longer(
     cols = starts_with("X"),
@@ -107,7 +111,6 @@ dataset_long <- dataset %>%
       yes = 1,
       no = 0
     ),
-    
     `Days Before Departure` = as.numeric(
       gsub("[^0-9]", "", `Days Before Departure`)
     )
@@ -168,7 +171,6 @@ output_long <- output %>%
       yes = 1,
       no = 0
     ),
-    
     `Days Before Departure` = as.numeric(
       gsub("[^0-9]", "", `Days Before Departure`)
     )
@@ -246,14 +248,15 @@ pickup_info_weekend <- dataset %>%
       yes = 1,
       no = 0
     )
-    ) %>%
+  ) %>%
   summarise(
     .groups = "drop",
-    across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)), 
-           .names = "{.col}")
-    ) %>%
-  ungroup() %>% 
-  mutate(across(-c(Origin_Destination, Target, WeekendDeparture), ~ Target - ., .names = "{.col}")) %>%  
+    across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)),
+      .names = "{.col}"
+    )
+  ) %>%
+  ungroup() %>%
+  mutate(across(-c(Origin_Destination, Target, WeekendDeparture), ~ Target - ., .names = "{.col}")) %>%
   select(-Target) %>%
   pivot_longer(
     cols = starts_with("X"),
