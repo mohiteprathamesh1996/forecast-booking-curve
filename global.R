@@ -148,9 +148,33 @@ output_long <- output %>%
   drop_na() %>%
   left_join(pickup_info, by = c("Origin_Destination", "Days Before Departure"))
 
-# --- Generate Historical Summary Statistics ---
+# --- Generate General Historical Summary Statistics ---
 historical_summary <- dataset_long %>%
   group_by(Origin_Destination, `Days Before Departure`) %>%
+  summarise(
+    .groups = "drop",
+    DailyBookingRate = mean(DailyBookingRate, na.rm = TRUE),
+    BookingRateAccelaration = mean(BookingRateAccelaration, na.rm = TRUE),
+    PercentageTargetReached = mean(PercentageTargetReached, na.rm = TRUE),
+    LF_PercentageTargetReached = mean(LF_PercentageTargetReached, na.rm = TRUE),
+    AvgPickUp = mean(AvgPickUp, na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  drop_na()
+
+# --- Generate Weekend/Weekday Based Historical Summary Statistics ---
+historical_summary_weekend <- dataset_long %>% 
+  mutate(
+    WeekendDeparture = ifelse(
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
+        "Thursday", 
+        "Friday"
+      ),
+      yes = 1,
+      no = 0
+    )
+  ) %>%
+  group_by(Origin_Destination, `Days Before Departure`, WeekendDeparture) %>%
   summarise(
     .groups = "drop",
     DailyBookingRate = mean(DailyBookingRate, na.rm = TRUE),
