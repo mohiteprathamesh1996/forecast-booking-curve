@@ -50,8 +50,9 @@ Project Root
 ├── server.R               # Backend logic (data filtering, forecasting models, AI insights)
 ├── ui.R                   # User interface layout
 ├── global.R               # Load datasets and preprocess data
+├── Explore.Rmd            # Rmd for experimentation
 ├── .github/workflows/
-│   ├── deploy.yml         # GitHub Actions for automatic deployment
+│   ├── main.yml         # GitHub Actions for automatic deployment
 ├── README.md              # Project documentation
 ```
 
