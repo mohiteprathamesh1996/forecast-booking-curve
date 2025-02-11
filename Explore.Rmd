@@ -197,8 +197,8 @@ output_long <- output %>%
     `Days Before Departure`
   ) %>%
   mutate(
-    DailyBookingRate = `Seats Sold` - lead(`Seats Sold`),
-    BookingRateAccelaration = DailyBookingRate - lead(DailyBookingRate),
+    DailyBookingRate = `Seats Sold` - lag(`Seats Sold`),
+    BookingRateAccelaration = DailyBookingRate - lag(DailyBookingRate),
     PercentageTargetReached = `Seats Sold` / Target
   ) %>%
   ungroup() %>%
@@ -233,13 +233,6 @@ historical_summary <- dataset_long %>%
 # historical_summary %>% write.csv("historical_summary.csv")
 ```
 
-
-```{r}
-dataset_long %>% 
-  filter(
-    departure_Date=="2022-06-01"
-  )
-```
 
 
 
@@ -281,10 +274,7 @@ historical_summary %>%
     `Avg Booking Rate` = sd(DailyBookingRate),
     `Avg Pick-Up Rate` = mean(AvgPickUp)
   )
-```
 
-
-```{r, fig.width=8, fig.height=8}
 historical_summary_weekend %>%
   filter(
     Origin_Destination == "DXB-XXX" 
@@ -709,6 +699,10 @@ calib_tbl %>%
 
 
 
+```{r}
+dataset_long %>%
+  mutate(across(c(DailyBookingRate), ~ replace_na(.x, 0)))
+```
 
 
 
@@ -794,8 +788,29 @@ response$choices$message.content
 
 
 
+```{r}
+library(reticulate)
+hf_hub <- import("huggingface_hub")
+hf_hub$login("")
+
+py_config()
+
+transformers <- import("transformers")
+
+model_name <- "meta-llama/Llama-2-7b-chat-hf"
+tokenizer <- transformers$AutoTokenizer$from_pretrained(model_name)
+model <- transformers$AutoModelForCausalLM$from_pretrained(model_name)
+```
 
 
+```{r}
+# Load the model and tokenizer
+generator <- transformers$pipeline("text-generation", model="gpt2")
+
+# Generate text
+output <- generator("You are a ", max_length=as.integer(50))
+print(output)
+```
 
 
 

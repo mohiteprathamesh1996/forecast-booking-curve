@@ -375,10 +375,14 @@ server <- function(input, output) {
         messages = list(
           list(
             role = "system",
-            content = "You are an expert in airline revenue management and
-            commercial strategy. Your goal is yah without unnecessary filler text.
-            Avoid making text bold or using bullet points."
-          ),
+            content = "
+            You are an expert in airline revenue management and 
+            commercial strategy. Answer questions with clear, structured 
+            insights using short paragraphs. Focus on key metrics, trends, 
+            and industry best practices. Limit responses to relevant 
+            data points and avoid speculation.
+            "
+            ),
           list(role = "user", content = query)
         ),
         temperature = 0.2, # Keeps responses focused and fact-based
