@@ -130,7 +130,7 @@ dataset_long <- dataset %>%
   ) %>%
   mutate(
     # In case there are missing seats in continuous series 
-    # we replace them with the average of seats around it
+    # we replace them with the average of sea
     `Seats Sold` = round(ifelse(
       test = is.na(`Seats Sold`),
       yes = (lead(`Seats Sold`) + lag(`Seats Sold`)) / 2,
@@ -142,7 +142,7 @@ dataset_long <- dataset %>%
   arrange(
     Origin_Destination,
     departure_Date,
-    desc(`Days Before Departure`)
+    `Days Before Departure`
   ) %>%
   mutate(
     DailyBookingRate = `Seats Sold` - lead(`Seats Sold`),
