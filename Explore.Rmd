@@ -419,37 +419,6 @@ grid.arrange(
 
 
 
-
-```{r}
-wday(dep_date, label = TRUE, abbr = FALSE) %in% c("Friday", "Saturday")
-```
-
-```{r}
-ifelse(
-  test = wday(dep_date, label = TRUE, abbr = FALSE) %in% c("Friday", "Saturday"),
-  yes = 1,
-  no = 0
-)
-```
-
-
-```{r}
-historical_summary_weekend %>%
-  filter(
-    WeekendDeparture == ifelse(
-      test = wday(
-        dep_date,
-        label = TRUE,
-        abbr = FALSE
-      ) %in% c("Friday", "Saturday"),
-      yes = 1,
-      no = 0
-    )
-  )
-```
-
-
-
 ```{r}
 dep_date <- "2023-03-12"
 route <- "DXB-XXX"
@@ -609,6 +578,13 @@ calib_tbl %>%
 
 
 
+
+
+
+
+
+
+
 ```{r}
 forecast_summary <- calib_tbl %>%
   modeltime_refit(
@@ -638,7 +614,7 @@ dep_date
 
 
 ```{r}
-query <- paste(
+paste(
   "This report provides an analysis of the forecasted booking curve for an upcoming flight,
   detailing expected demand and commercial implications until departure.\n\n",
   "Actual seat bookings over time:\n",
@@ -659,7 +635,7 @@ query <- paste(
   "Given this forecast and historical trends, please provide a strategic assessment of the booking trajectory,
   highlighting potential risks, revenue opportunities and any recommended actions to stimulate demand if it falls short.
 Also do mention the approximate date (format Month, day, year) when the bookings begin to pick up closer to departure date."
-)
+) %>% cat()
 ```
 
 
