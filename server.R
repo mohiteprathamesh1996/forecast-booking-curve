@@ -376,9 +376,7 @@ server <- function(input, output) {
           list(
             role = "system",
             content = "You are an expert in airline revenue management and
-            commercial strategy. Your goal is to provide structured,
-            data-driven insights on airline booking trends, pricing strategies,
-            and demand optimization without unnecessary filler text.
+            commercial strategy. Your goal is yah without unnecessary filler text.
             Avoid making text bold or using bullet points."
           ),
           list(role = "user", content = query)
