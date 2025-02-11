@@ -165,8 +165,8 @@ output_long <- output %>%
   mutate(
     WeekendDeparture = ifelse(
       test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
-        "Thursday",
-        "Friday"
+        "Saturady",
+        "Sunday"
       ),
       yes = 1,
       no = 0
@@ -232,6 +232,138 @@ historical_summary <- dataset_long %>%
 
 # historical_summary %>% write.csv("historical_summary.csv")
 ```
+
+
+```{r}
+dataset_long %>% 
+  filter(
+    departure_Date=="2022-06-01"
+  )
+```
+
+
+
+```{r}
+dataset_long %>% 
+  filter(
+    departure_Date=="2022-06-01"
+  ) %>% 
+  mutate(`Days Before Departure` = -`Days Before Departure`) %>% 
+  ggplot(
+    aes(
+      x = `Days Before Departure`, 
+      y = `Seats Sold`,
+      color = Origin_Destination
+      )
+    ) + 
+  geom_line(size=0.8) +
+  labs(title = "Booking Curve for Flight Departing on 2022-06-01") +
+  theme_bw()
+
+
+historical_summary %>% 
+  filter(
+    Origin_Destination=="XXX-DXB"
+    ) %>% 
+  group_by(
+    `Traveller Type` = ifelse(
+      test = `Days Before Departure`<30, 
+      yes = "3-Last Minute Booking", 
+      no = ifelse(
+        test = `Days Before Departure`>=90,
+        yes = "1-Early Booking",
+        no = "2-Mid-Term Booking"
+      )
+      )
+  ) %>% 
+  summarise(
+    .groups = "drop",
+    `Avg Booking Rate` = sd(DailyBookingRate),
+    `Avg Pick-Up Rate` = mean(AvgPickUp)
+  )
+```
+
+
+```{r, fig.width=8, fig.height=8}
+historical_summary_weekend %>%
+  filter(
+    Origin_Destination == "DXB-XXX" 
+  ) %>%
+  mutate(
+    WeekendDeparture = ifelse(WeekendDeparture==1, "Weekend Departure", "Weekday Departure"), 
+    `Days Before Departure` = -1 * `Days Before Departure`
+    ) %>%
+  ggplot(
+    aes(
+      x = `Days Before Departure`,
+      y = DailyBookingRate
+    )
+  ) +
+  geom_line(na.rm = TRUE) +
+  facet_wrap(~WeekendDeparture, nrow=2) +
+  theme_bw()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
