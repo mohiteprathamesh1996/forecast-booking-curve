@@ -35,23 +35,6 @@ output <- read.csv("data/output.csv") %>%
   arrange(departure_Date)
 
 # Compute pickup
-pickup_info <- dataset %>%
-  group_by(Origin_Destination) %>%
-  summarise(across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)), .names = "{.col}")) %>%
-  mutate(across(-c(Origin_Destination, Target), ~ Target - ., .names = "{.col}")) %>%
-  select(-Target) %>%
-  pivot_longer(
-    cols = starts_with("X"),
-    names_to = "Days Before Departure",
-    values_to = "AvgPickUp"
-  ) %>%
-  mutate(
-    `Days Before Departure` = as.numeric(
-      gsub("[^0-9]", "", `Days Before Departure`)
-    )
-  ) %>%
-  drop_na()
-
 pickup_info_weekend <- dataset %>%
   group_by(
     Origin_Destination,
@@ -215,189 +198,24 @@ output_long <- output %>%
   left_join(
     pickup_info_weekend,
     by = c("Origin_Destination", "Days Before Departure", "WeekendDeparture")
-  )
-
-historical_summary <- dataset_long %>%
-  group_by(Origin_Destination, `Days Before Departure`) %>%
-  summarise(
-    .groups = "drop",
-    DailyBookingRate = mean(DailyBookingRate, na.rm = TRUE),
-    BookingRateAccelaration = mean(BookingRateAccelaration, na.rm = TRUE),
-    PercentageTargetReached = mean(PercentageTargetReached, na.rm = TRUE),
-    LF_PercentageTargetReached = mean(LF_PercentageTargetReached, na.rm = TRUE),
-    AvgPickUp = mean(AvgPickUp, na.rm = TRUE)
-  ) %>%
-  ungroup() %>%
-  drop_na()
-
-# historical_summary %>% write.csv("historical_summary.csv")
-```
-
-
-
-
-```{r}
-dataset_long %>% 
-  filter(
-    departure_Date=="2022-06-01"
-  ) %>% 
-  mutate(`Days Before Departure` = -`Days Before Departure`) %>% 
-  ggplot(
-    aes(
-      x = `Days Before Departure`, 
-      y = `Seats Sold`,
-      color = Origin_Destination
-      )
-    ) + 
-  geom_line(size=0.8) +
-  labs(title = "Booking Curve for Flight Departing on 2022-06-01") +
-  theme_bw()
-
-
-historical_summary %>% 
-  filter(
-    Origin_Destination=="XXX-DXB"
-    ) %>% 
-  group_by(
-    `Traveller Type` = ifelse(
-      test = `Days Before Departure`<30, 
-      yes = "3-Last Minute Booking", 
-      no = ifelse(
-        test = `Days Before Departure`>=90,
-        yes = "1-Early Booking",
-        no = "2-Mid-Term Booking"
-      )
-      )
-  ) %>% 
-  summarise(
-    .groups = "drop",
-    `Avg Booking Rate` = sd(DailyBookingRate),
-    `Avg Pick-Up Rate` = mean(AvgPickUp)
-  )
-
-historical_summary_weekend %>%
-  filter(
-    Origin_Destination == "DXB-XXX" 
   ) %>%
   mutate(
-    WeekendDeparture = ifelse(WeekendDeparture==1, "Weekend Departure", "Weekday Departure"), 
-    `Days Before Departure` = -1 * `Days Before Departure`
-    ) %>%
-  ggplot(
-    aes(
-      x = `Days Before Departure`,
-      y = DailyBookingRate
-    )
-  ) +
-  geom_line(na.rm = TRUE) +
-  facet_wrap(~WeekendDeparture, nrow=2) +
-  theme_bw()
-```
+    `Traditional Pick-Up Forecast` = `Seats Sold` + AvgPickUp
+  )
+
+# historical_summary <- dataset_long %>%
+#   group_by(Origin_Destination, `Days Before Departure`) %>%
+#   summarise(
+#     .groups = "drop",
+#     DailyBookingRate = mean(DailyBookingRate, na.rm = TRUE),
+#     BookingRateAccelaration = mean(BookingRateAccelaration, na.rm = TRUE),
+#     PercentageTargetReached = mean(PercentageTargetReached, na.rm = TRUE),
+#     LF_PercentageTargetReached = mean(LF_PercentageTargetReached, na.rm = TRUE),
+#     AvgPickUp = mean(AvgPickUp, na.rm = TRUE)
+#   ) %>%
+#   ungroup() %>%
+#   drop_na()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```{r}
-pickup_info_weekend <- dataset %>%
-  group_by(
-    Origin_Destination,
-    WeekendDeparture = ifelse(
-      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
-        "Thursday",
-        "Friday"
-      ),
-      yes = 1,
-      no = 0
-    )
-  ) %>%
-  summarise(
-    .groups = "drop",
-    across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)),
-      .names = "{.col}"
-    )
-  ) %>%
-  ungroup() %>%
-  mutate(across(-c(Origin_Destination, Target, WeekendDeparture), ~ Target - ., .names = "{.col}")) %>%
-  select(-Target) %>%
-  pivot_longer(
-    cols = starts_with("X"),
-    names_to = "Days Before Departure",
-    values_to = "AvgPickUp"
-  ) %>%
-  mutate(
-    `Days Before Departure` = as.numeric(
-      gsub("[^0-9]", "", `Days Before Departure`)
-    )
-  ) %>%
-  drop_na()
-```
-
-
-
-
-
-```{r, fig.width=12, fig.height=4}
 historical_summary_weekend <- dataset_long %>%
   mutate(
     WeekendDeparture = ifelse(
@@ -421,122 +239,85 @@ historical_summary_weekend <- dataset_long %>%
   ungroup() %>%
   drop_na()
 
-
-historical_summary_weekend %>%
-  filter(
-    Origin_Destination == "DXB-XXX" &
-      WeekendDeparture == 1
-  ) %>%
-  mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
-  ggplot(
-    aes(
-      x = `Days Before Departure`,
-      y = AvgPickUp
-    )
-  ) +
-  geom_line(na.rm = TRUE) +
-  theme_bw()
-
-historical_summary_weekend %>%
-  filter(
-    Origin_Destination == "DXB-XXX" &
-      WeekendDeparture == 1
-  ) %>%
-  mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
-  ggplot(
-    aes(
-      x = `Days Before Departure`,
-      y = DailyBookingRate
-    )
-  ) +
-  geom_line(na.rm = TRUE) +
-  facet_wrap(~WeekendDeparture) +
-  theme_bw()
-```
-```{r, fig.width=12, fig.height=4}
-historical_summary_weekend %>%
-  filter(
-    Origin_Destination == "DXB-XXX" &
-      WeekendDeparture == 0
-  ) %>%
-  mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
-  ggplot(
-    aes(
-      x = `Days Before Departure`,
-      y = AvgPickUp
-    )
-  ) +
-  geom_line(na.rm = TRUE) +
-  theme_bw()
-
-historical_summary_weekend %>%
-  filter(
-    Origin_Destination == "DXB-XXX" &
-      WeekendDeparture == 0
-  ) %>%
-  mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
-  ggplot(
-    aes(
-      x = `Days Before Departure`,
-      y = DailyBookingRate
-    )
-  ) +
-  geom_line(na.rm = TRUE) +
-  facet_wrap(~WeekendDeparture) +
-  theme_bw()
+# historical_summary %>% write.csv("historical_summary.csv")
 ```
 
 
 
 
 
+```{r}
+pickup_info_weekend %>%
+  filter(
+    Origin_Destination == route &
+      WeekendDeparture == 1
+  )
+```
 
+```{r}
+advance_pickup_df <- output_long %>%
+  filter(
+    Origin_Destination == route &
+      departure_Date == dep_date
+  ) %>%
+  filter(
+    `Days Before Departure` == min(`Days Before Departure`, na.rm = TRUE)
+  )
 
-
-
-
-
-
-
-
-
-```{r, fig.width=12, fig.height=7}
-grid.arrange(
-  historical_summary %>%
-    mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
-    ggplot(
-      aes(
-        x = `Days Before Departure`,
-        y = BookingRateAccelaration
-      )
-    ) +
-    geom_line(na.rm = TRUE) +
-    facet_wrap(~Origin_Destination) +
-    theme_bw(),
-  historical_summary %>%
-    mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
-    ggplot(
-      aes(
-        x = `Days Before Departure`,
-        y = DailyBookingRate
-      )
-    ) +
-    geom_line(na.rm = TRUE) +
-    facet_wrap(~Origin_Destination) +
-    theme_bw(),
-  historical_summary %>%
-    mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
-    ggplot(
-      aes(
-        x = `Days Before Departure`,
-        y = AvgPickUp
-      )
-    ) +
-    geom_line(na.rm = TRUE) +
-    facet_wrap(~Origin_Destination) +
-    theme_bw()
+seq(advance_pickup_df$`Seats Sold`, advance_pickup_df$`Traditional Pick-Up Forecast`, length.out = days_ahead)
+```
+```{r}
+data.frame(
+  .model_id = rep(NA, days_ahead),
+  .model_desc = rep("Traditional PickUp Model", days_ahead),
+  .key = rep("prediction", days_ahead),
+  .index = future_data %>% pull(`Date Before Departure`) %>% sort(),
+  .value = seq(
+    advance_pickup_df$`Seats Sold`,
+    advance_pickup_df$`Traditional Pick-Up Forecast`,
+    length.out = days_ahead
+  ),
+  .conf_lo = rep(NA, days_ahead),
+  .conf_hi = rep(NA, days_ahead)
 )
+
+future_data %>%
+  pull(`Date Before Departure`) %>%
+  sort()
 ```
+
+
+```{r}
+calib_tbl %>%
+  modeltime_refit(
+    data = train
+  ) %>%
+  modeltime_forecast(
+    new_data = future_data,
+    actual_data = train
+  ) %>%
+  rbind(data.frame(
+    .model_id = rep(NA, days_ahead),
+    .model_desc = rep("Traditional PickUp Model", days_ahead),
+    .key = rep("prediction", days_ahead),
+    .index = future_data %>% pull(`Date Before Departure`) %>% sort(),
+    .value = seq(
+      advance_pickup_df$`Seats Sold`,
+      advance_pickup_df$`Traditional Pick-Up Forecast`,
+      length.out = days_ahead
+    ),
+    .conf_lo = rep(NA, days_ahead),
+    .conf_hi = rep(NA, days_ahead)
+  ))
+```
+
+
+```{r}
+future_data
+```
+
+
+
 
 
 
@@ -673,6 +454,16 @@ future_data <- future_frame(
 
 calib_tbl %>% modeltime_accuracy()
 
+advance_pickup_df <- output_long %>%
+  filter(
+    Origin_Destination == route &
+      departure_Date == dep_date
+  ) %>%
+  filter(
+    `Days Before Departure` == min(`Days Before Departure`, na.rm = TRUE)
+  )
+
+
 calib_tbl %>%
   modeltime_refit(
     data = train
@@ -680,6 +471,21 @@ calib_tbl %>%
   modeltime_forecast(
     new_data = future_data,
     actual_data = train
+  ) %>%
+  rbind(
+    data.frame(
+      .model_id = rep(NA, days_ahead),
+      .model_desc = rep("Traditional PickUp Model", days_ahead),
+      .key = rep("prediction", days_ahead),
+      .index = future_data %>% pull(`Date Before Departure`) %>% sort(),
+      .value = seq(
+        advance_pickup_df$`Seats Sold`,
+        advance_pickup_df$`Traditional Pick-Up Forecast`,
+        length.out = days_ahead
+      ),
+      .conf_lo = rep(NA, days_ahead),
+      .conf_hi = rep(NA, days_ahead)
+    )
   ) %>%
   mutate(
     .value = round(.value),
@@ -696,14 +502,6 @@ calib_tbl %>%
     )
   )
 ```
-
-
-
-```{r}
-dataset_long %>%
-  mutate(across(c(DailyBookingRate), ~ replace_na(.x, 0)))
-```
-
 
 
 
@@ -805,10 +603,10 @@ model <- transformers$AutoModelForCausalLM$from_pretrained(model_name)
 
 ```{r}
 # Load the model and tokenizer
-generator <- transformers$pipeline("text-generation", model="gpt2")
+generator <- transformers$pipeline("text-generation", model = "gpt2")
 
 # Generate text
-output <- generator("You are a ", max_length=as.integer(50))
+output <- generator("You are a ", max_length = as.integer(50))
 print(output)
 ```
 

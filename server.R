@@ -233,6 +233,15 @@ server <- function(input, output) {
         by = "Days Before Departure"
       )
 
+    advance_pickup_df <- output_long %>%
+      filter(
+        Origin_Destination == route &
+          departure_Date == dep_date
+      ) %>%
+      filter(
+        `Days Before Departure` == min(`Days Before Departure`, na.rm = TRUE)
+      )
+
     # --- Generate AI Insights (OpenAI API Call) ---
     output$ai_insights <- renderUI({
       # Extract forecasted seat bookings
@@ -376,13 +385,13 @@ server <- function(input, output) {
           list(
             role = "system",
             content = "
-            You are an expert in airline revenue management and 
-            commercial strategy. Answer questions with clear, structured 
-            insights using short paragraphs. Focus on key metrics, trends, 
-            and industry best practices. Limit responses to relevant 
+            You are an expert in airline revenue management and
+            commercial strategy. Answer questions with clear, structured
+            insights using short paragraphs. Focus on key metrics, trends,
+            and industry best practices. Limit responses to relevant
             data points and avoid speculation.
             "
-            ),
+          ),
           list(role = "user", content = query)
         ),
         temperature = 0.2, # Keeps responses focused and fact-based
@@ -402,10 +411,27 @@ server <- function(input, output) {
 
     # --- Generate Forecast Plot ---
     forecast_plot <- calib_tbl %>%
-      modeltime_refit(data = train) %>%
+      modeltime_refit(
+        data = train
+      ) %>%
       modeltime_forecast(
         new_data = future_data,
         actual_data = train
+      ) %>%
+      rbind(
+        data.frame(
+          .model_id = rep(NA, days_ahead),
+          .model_desc = rep("Traditional PickUp Model", days_ahead),
+          .key = rep("prediction", days_ahead),
+          .index = future_data %>% pull(`Date Before Departure`) %>% sort(),
+          .value = seq(
+            advance_pickup_df$`Seats Sold`,
+            advance_pickup_df$`Traditional Pick-Up Forecast`,
+            length.out = days_ahead
+          ),
+          .conf_lo = rep(NA, days_ahead),
+          .conf_hi = rep(NA, days_ahead)
+        )
       ) %>%
       mutate(
         .value = round(.value),
@@ -423,6 +449,7 @@ server <- function(input, output) {
           )
         )
       )
+
 
     # Convert GGPlot to Interactive Plotly Graph
     ggplotly(forecast_plot) %>%

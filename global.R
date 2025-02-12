@@ -54,7 +54,7 @@ output <- read.csv("data/output.csv") %>%
   arrange(departure_Date)
 
 # --- Compute Pickup (Seats Left to Sell) ---
-weekend_definition <- c("Friday", "Saturday")
+weekend_definition <- c("Saturday", "Sunday")
 
 pickup_info_weekend <- dataset %>%
   group_by(
@@ -129,7 +129,7 @@ dataset_long <- dataset %>%
     )
   ) %>%
   mutate(
-    # In case there are missing seats in continuous series 
+    # In case there are missing seats in continuous series
     # we replace them with the average of sea
     `Seats Sold` = round(ifelse(
       test = is.na(`Seats Sold`),
@@ -225,6 +225,9 @@ output_long <- output %>%
   left_join(
     pickup_info_weekend,
     by = c("Origin_Destination", "Days Before Departure", "WeekendDeparture")
+  ) %>%
+  mutate(
+    `Traditional Pick-Up Forecast` = `Seats Sold` + AvgPickUp
   )
 
 # --- Generate General Historical Summary Statistics ---

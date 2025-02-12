@@ -5,7 +5,7 @@ account: prathameshmohite
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 13945805
-bundleId: 9784149
+bundleId: 9790003
 url: https://prathameshmohite.shinyapps.io/flight-booking-curve/
 version: 1
 asMultiple: FALSE
