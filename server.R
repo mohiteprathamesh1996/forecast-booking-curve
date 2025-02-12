@@ -143,19 +143,39 @@ server <- function(input, output) {
 
     # --- Model Definitions ---
     # 1. ARIMA Model
+    start_time_arima <- Sys.time()
     model_arima <- arima_reg() %>%
       set_engine("auto_arima") %>%
       fit(`Seats Sold` ~ `Date Before Departure`, training(splits))
+    end_time_arima <- Sys.time()
+    time_arima <- as.numeric(
+      difftime(
+        end_time_arima, 
+        start_time_arima, 
+        units = "secs"
+        )
+      )
 
     # 2. Prophet Model (Logistic Growth)
+    start_time_prophet <- Sys.time()
     model_prophet <- prophet_reg(
       growth = "logistic",
       logistic_cap = target_cap
-    ) %>%
+      ) %>%
       set_engine("prophet") %>%
       fit(`Seats Sold` ~ `Date Before Departure`, training(splits))
+    end_time_prophet <- Sys.time()
+    time_prophet <- as.numeric(
+      difftime(
+        end_time_prophet, 
+        start_time_prophet, 
+        units = "secs"
+        )
+      )
+    
 
-    # 3. Prophet Model with Additional Regressors
+    # 3. Prophet Model with Additional Regressor(s)
+    start_time_prophet_reg <- Sys.time()
     model_prophet_with_reg <- prophet_reg(
       growth = "logistic",
       season = "multiplicative",
@@ -170,15 +190,31 @@ server <- function(input, output) {
           AvgPickUp,
         training(splits)
       )
+    end_time_prophet_reg <- Sys.time()
+    time_prophet_reg <- as.numeric(
+      difftime(
+        end_time_prophet_reg, 
+        start_time_prophet_reg, 
+        units = "secs"
+        )
+      )
 
     # --- Model Calibration & Accuracy Assessment ---
     model_tbl <- modeltime_table(
       model_arima,
       model_prophet,
       model_prophet_with_reg
-    )
+      ) %>%
+      mutate(
+        TrainingTime = c(
+          time_arima, 
+          time_prophet, 
+          time_prophet_reg
+          )
+        )
 
     calib_tbl <- model_tbl %>%
+      select(-TrainingTime) %>% 
       modeltime_calibrate(testing(splits))
 
     # --- Display Model Accuracy in a Table ---
@@ -186,6 +222,11 @@ server <- function(input, output) {
       calib_tbl %>%
         modeltime_accuracy() %>%
         mutate(
+          `Training Time (Sec)` = c(
+            time_arima, 
+            time_prophet, 
+            time_prophet_reg
+          ),
           across(
             where(is.numeric) &
               !all_of(c(".model_id")),
