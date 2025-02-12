@@ -421,14 +421,16 @@ server <- function(input, output) {
       rbind(
         data.frame(
           .model_id = rep(NA, days_ahead),
-          .model_desc = rep("Traditional PickUp Model", days_ahead),
+          .model_desc = rep("4_Traditional PickUp Model", days_ahead),
           .key = rep("prediction", days_ahead),
           .index = future_data %>% pull(`Date Before Departure`) %>% sort(),
-          .value = seq(
-            advance_pickup_df$`Seats Sold`,
-            advance_pickup_df$`Traditional Pick-Up Forecast`,
-            length.out = days_ahead
-          ),
+          .value = round(
+            seq(
+              advance_pickup_df$`Seats Sold`,
+              advance_pickup_df$`Traditional Pick-Up Forecast`,
+              length.out = days_ahead
+              )
+            ),
           .conf_lo = rep(NA, days_ahead),
           .conf_hi = rep(NA, days_ahead)
         )
