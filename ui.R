@@ -7,7 +7,7 @@ ui <- fluidPage(
     HTML("
     /* Styling for the slider */
     .irs-bar {
-      background: #D71920 !important;  /* Changed to match Emirates red */
+      background: green !important;  /* Changed to match Emirates red */
       border-top: 1px solid black !important;
       border-bottom: 1px solid black !important;
     }
@@ -81,8 +81,7 @@ ui <- fluidPage(
     ),
     
     tags$link(rel = "stylesheet", type = "text/css")
-  )
-  ,
+    ),
 
   # --- Title Panel ---
   div(
