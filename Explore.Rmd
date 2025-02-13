@@ -35,14 +35,13 @@ output <- read.csv("data/output.csv") %>%
   arrange(departure_Date)
 
 # Compute pickup
+weekend_definition <- c("Saturday", "Sunday")
+
 pickup_info_weekend <- dataset %>%
   group_by(
     Origin_Destination,
     WeekendDeparture = ifelse(
-      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
-        "Thursday",
-        "Friday"
-      ),
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% weekend_definition,
       yes = 1,
       no = 0
     )
@@ -87,10 +86,7 @@ dataset_long <- dataset %>%
   ) %>%
   mutate(
     WeekendDeparture = ifelse(
-      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
-        "Thursday",
-        "Friday"
-      ),
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% weekend_definition,
       yes = 1,
       no = 0
     ),
@@ -147,10 +143,7 @@ output_long <- output %>%
   ) %>%
   mutate(
     WeekendDeparture = ifelse(
-      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
-        "Saturady",
-        "Sunday"
-      ),
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% weekend_definition,
       yes = 1,
       no = 0
     ),
@@ -219,10 +212,7 @@ output_long <- output %>%
 historical_summary_weekend <- dataset_long %>%
   mutate(
     WeekendDeparture = ifelse(
-      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% c(
-        "Thursday",
-        "Friday"
-      ),
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% weekend_definition,
       yes = 1,
       no = 0
     )
@@ -241,6 +231,11 @@ historical_summary_weekend <- dataset_long %>%
 
 # historical_summary %>% write.csv("historical_summary.csv")
 ```
+
+
+
+
+
 
 
 
@@ -322,7 +317,7 @@ model_prophet_with_reg <- prophet_reg(
 ) %>%
   set_engine("prophet") %>%
   fit(
-    `Seats Sold` ~ `Date Before Departure` + DailyBookingRate + LF_PercentageTargetReached + AvgPickUp,
+    `Seats Sold` ~ `Date Before Departure` + DailyBookingRate + LF_PercentageTargetReached,
     training(splits)
   )
 
@@ -357,7 +352,7 @@ future_data <- future_frame(
             dep_date,
             label = TRUE,
             abbr = FALSE
-          ) %in% c("Friday", "Saturday"),
+          ) %in% weekend_definition,
           yes = 1,
           no = 0
         )

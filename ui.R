@@ -71,7 +71,7 @@ ui <- fluidPage(
       div(
         plotlyOutput(
           "forecast_plot",
-          width = "1550px",
+          width = "1500px",
           # height = "600px"
         ),
         style = "width: 95%; margin: auto;"
