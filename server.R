@@ -1,15 +1,18 @@
 server <- function(input, output) {
   # --- Reactive Expression: Filter Dataset Based on User Selection ---
-  # This ensures the user has selected a departure date and route before filtering.
-  filtered_data <- reactive({
-    req(input$dep_date, input$route) # Ensure required inputs are provided
+  filtered_data <- eventReactive(
+    input$apply_filters,
+    {
+      req(input$dep_date, input$route)
 
-    output_long %>%
-      filter(
-        departure_Date == as.Date(input$dep_date) & # Match selected departure date
-          Origin_Destination == input$route # Match selected route
-      )
-  })
+      output_long %>%
+        filter(
+          departure_Date == as.Date(input$dep_date) &
+            Origin_Destination == input$route
+        )
+    }
+  )
+  
 
   # --- Dynamic UI: Historical Trends Title ---
   # This dynamically generates the title based on user-selected route.
@@ -63,7 +66,7 @@ server <- function(input, output) {
             y = AvgPickUp
           )
         ) +
-        geom_line(na.rm = TRUE, color = "#D71920", size = 0.8) + # Red line for visual emphasis
+        geom_line(na.rm = TRUE, color = "#E7002A", size = 0.8) +
         theme_bw(),
       historical_summary_weekend %>%
         filter(
@@ -85,7 +88,7 @@ server <- function(input, output) {
             y = DailyBookingRate
           )
         ) +
-        geom_line(na.rm = TRUE, color = "darkgreen", size = 0.8) + # Green line for contrast
+        geom_line(na.rm = TRUE, color = "darkgreen", size = 0.8) +
         theme_bw()
     )
   })
@@ -150,29 +153,29 @@ server <- function(input, output) {
     end_time_arima <- Sys.time()
     time_arima <- as.numeric(
       difftime(
-        end_time_arima, 
-        start_time_arima, 
+        end_time_arima,
+        start_time_arima,
         units = "secs"
-        )
       )
+    )
 
     # 2. Prophet Model (Logistic Growth)
     start_time_prophet <- Sys.time()
     model_prophet <- prophet_reg(
       growth = "logistic",
       logistic_cap = target_cap
-      ) %>%
+    ) %>%
       set_engine("prophet") %>%
       fit(`Seats Sold` ~ `Date Before Departure`, training(splits))
     end_time_prophet <- Sys.time()
     time_prophet <- as.numeric(
       difftime(
-        end_time_prophet, 
-        start_time_prophet, 
+        end_time_prophet,
+        start_time_prophet,
         units = "secs"
-        )
       )
-    
+    )
+
 
     # 3. Prophet Model with Additional Regressor(s)
     start_time_prophet_reg <- Sys.time()
@@ -193,28 +196,28 @@ server <- function(input, output) {
     end_time_prophet_reg <- Sys.time()
     time_prophet_reg <- as.numeric(
       difftime(
-        end_time_prophet_reg, 
-        start_time_prophet_reg, 
+        end_time_prophet_reg,
+        start_time_prophet_reg,
         units = "secs"
-        )
       )
+    )
 
     # --- Model Calibration & Accuracy Assessment ---
     model_tbl <- modeltime_table(
       model_arima,
       model_prophet,
       model_prophet_with_reg
-      ) %>%
+    ) %>%
       mutate(
         TrainingTime = c(
-          time_arima, 
-          time_prophet, 
+          time_arima,
+          time_prophet,
           time_prophet_reg
-          )
         )
+      )
 
     calib_tbl <- model_tbl %>%
-      select(-TrainingTime) %>% 
+      select(-TrainingTime) %>%
       modeltime_calibrate(testing(splits))
 
     # --- Display Model Accuracy in a Table ---
@@ -223,8 +226,8 @@ server <- function(input, output) {
         modeltime_accuracy() %>%
         mutate(
           `Training Time (Sec)` = c(
-            time_arima, 
-            time_prophet, 
+            time_arima,
+            time_prophet,
             time_prophet_reg
           ),
           across(
@@ -414,8 +417,8 @@ server <- function(input, output) {
         when booking momentum typically accelerates closer to departure.",
         "Deliver the response in structured paragraphs with a fact-based
         approach, avoiding bullet points or bold text. Use 'we' instead of
-        'I'. Focus on **data-driven insights and strategic airline
-        pricing adjustments**."
+        'I'. Focus on data-driven insights and strategic airline
+        pricing adjustments."
       )
 
 
@@ -470,8 +473,8 @@ server <- function(input, output) {
               advance_pickup_df$`Seats Sold`,
               advance_pickup_df$`Traditional Pick-Up Forecast`,
               length.out = days_ahead
-              )
-            ),
+            )
+          ),
           .conf_lo = rep(NA, days_ahead),
           .conf_hi = rep(NA, days_ahead)
         )
