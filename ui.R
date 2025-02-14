@@ -105,7 +105,7 @@ ui <- fluidPage(
   sidebarLayout(
 
     # --- Sidebar Panel (User Inputs) ---
-    sidebarPanel(
+    sidebarPanel( 
       width = 3, # Slightly wider for better spacing
       class = "sticky-sidebar",
       style = "
@@ -209,7 +209,18 @@ ui <- fluidPage(
         color: #333;
         "
       ),
-      uiOutput("ai_insights"),
+      # AI-Generated Insights Section with Premium Font
+      div(
+        uiOutput("ai_insights"),
+        style = "
+        font-family: 'Playfair Display', serif; 
+        font-size: 18px; 
+        font-weight: 500; 
+        color: #333; 
+        text-align: justify;
+        padding: 15px;
+        "
+        ),
 
       # --- Model Accuracy Metrics Table ---
       h3(
@@ -222,6 +233,8 @@ ui <- fluidPage(
         "
       ),
       DTOutput("accuracy_table")
+      )
+    
     )
   )
-)
+

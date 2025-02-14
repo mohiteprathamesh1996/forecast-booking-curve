@@ -66,7 +66,7 @@ server <- function(input, output) {
             y = AvgPickUp
           )
         ) +
-        geom_line(na.rm = TRUE, color = "#E7002A", size = 0.8) +
+        geom_line(na.rm = TRUE, color = "#D71920", size = 0.8) +
         theme_bw(),
       historical_summary_weekend %>%
         filter(
