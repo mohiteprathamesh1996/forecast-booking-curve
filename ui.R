@@ -54,10 +54,10 @@ ui <- fluidPage(
       position: fixed !important;
       top: 10px !important;
       left: 10px !important;
-      width: 400px !important; /* Match original sidebar width */
+      width: 400px !important;
       height: 100vh !important;
       overflow-y: auto !important;
-      background: white !important;
+      background-color: #FAF6F0 !important; /* Updated to Warm Beige */
       padding: 15px !important;
       border-radius: 10px !important;
       box-shadow: 2px 2px 10px rgba(0,0,0,0.1) !important;
@@ -109,10 +109,10 @@ ui <- fluidPage(
       width = 3, # Slightly wider for better spacing
       class = "sticky-sidebar",
       style = "
-      background-color: #FAFAFA;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+      background-color: #FAF6F0 !important; /* Warm Beige */
+      padding: 15px !important;
+      border-radius: 10px !important;
+      box-shadow: 2px 2px 10px rgba(0,0,0,0.1) !important;
       ",
 
       selectInput(
