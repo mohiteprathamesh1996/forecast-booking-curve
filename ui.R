@@ -4,7 +4,7 @@ ui <- fluidPage(
   # --- Load Custom Fonts & Styles ---
   tags$head(
     tags$style(
-    HTML("
+      HTML("
     /* Styling for the slider */
     .irs-bar {
       background: green !important;  /* Changed to match Emirates red */
@@ -69,19 +69,16 @@ ui <- fluidPage(
       margin-left: 270px !important;
       padding: 20px;
     }
-  "
-         )
+  ")
     ),
-    
     tags$link(
       href = "
       https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;700&display=swap
       ",
       rel = "stylesheet"
     ),
-    
     tags$link(rel = "stylesheet", type = "text/css")
-    ),
+  ),
 
   # --- Title Panel ---
   div(
@@ -105,7 +102,7 @@ ui <- fluidPage(
   sidebarLayout(
 
     # --- Sidebar Panel (User Inputs) ---
-    sidebarPanel( 
+    sidebarPanel(
       width = 3, # Slightly wider for better spacing
       class = "sticky-sidebar",
       style = "
@@ -114,19 +111,16 @@ ui <- fluidPage(
       border-radius: 10px !important;
       box-shadow: 2px 2px 10px rgba(0,0,0,0.1) !important;
       ",
-
       selectInput(
         "dep_date",
         "Select Departure Date:",
         choices = departure_dates
       ),
-      
       selectInput(
         "route",
         "Select Sector:",
         choices = routes
       ),
-      
       sliderInput(
         "top_n_train",
         "Most Recent Training Window (%):",
@@ -135,7 +129,6 @@ ui <- fluidPage(
         value = 100,
         step = 1
       ),
-      
       sliderInput(
         "test_slice",
         "Set Testing Slice (%):",
@@ -144,7 +137,6 @@ ui <- fluidPage(
         value = 20,
         step = 1
       ),
-      
       sliderInput(
         "proph_changepoint_num",
         "Set Prophet Changepoints:",
@@ -213,14 +205,14 @@ ui <- fluidPage(
       div(
         uiOutput("ai_insights"),
         style = "
-        font-family: 'Playfair Display', serif; 
-        font-size: 18px; 
-        font-weight: 500; 
-        color: #333; 
+        font-family: 'Playfair Display', serif;
+        font-size: 18px;
+        font-weight: 500;
+        color: #333;
         text-align: justify;
         padding: 15px;
         "
-        ),
+      ),
 
       # --- Model Accuracy Metrics Table ---
       h3(
@@ -233,8 +225,6 @@ ui <- fluidPage(
         "
       ),
       DTOutput("accuracy_table")
-      )
-    
     )
   )
-
+)

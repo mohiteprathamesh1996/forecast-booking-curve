@@ -12,7 +12,7 @@ server <- function(input, output) {
         )
     }
   )
-  
+
 
   # --- Dynamic UI: Historical Trends Title ---
   # This dynamically generates the title based on user-selected route.
