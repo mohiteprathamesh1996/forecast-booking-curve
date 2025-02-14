@@ -17,8 +17,7 @@ server <- function(input, output) {
   # --- Dynamic UI: Historical Trends Title ---
   # This dynamically generates the title based on user-selected route.
   output$historical_title <- renderUI({
-    req(input$route) # Ensure a route is selected
-    req(input$dep_date)
+    req(filtered_data())
 
     h3(
       paste(
@@ -45,6 +44,7 @@ server <- function(input, output) {
   # The `grid.arrange()` function arranges them in a single view.
 
   output$historical_plots <- renderPlot({
+    req(filtered_data())
     grid.arrange(
       historical_summary_weekend %>%
         filter(
@@ -488,8 +488,8 @@ server <- function(input, output) {
         .x_lab = "Date Before Departure",
         .y_lab = "Seats Sold",
         .title = paste(
-          "Booking Curve for", route, "on", dep_date,
-          paste("[Target =", target_cap, " seats; Train Obs = ", nrow(train),
+          "Booking Curve for", input$route, "on", input$dep_date,
+          paste("[Target = ", target_cap, " seats; Train Obs = ", nrow(train),
             "; ", "Predict days = ", days_ahead, "]",
             sep = ""
           )
