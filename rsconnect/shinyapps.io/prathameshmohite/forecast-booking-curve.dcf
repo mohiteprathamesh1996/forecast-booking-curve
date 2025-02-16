@@ -5,9 +5,8 @@ account: prathameshmohite
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 13948491
-bundleId: 9802554
+bundleId: 9806204
 url: https://prathameshmohite.shinyapps.io/forecast-booking-curve/
 version: 1
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .github/workflows/main.yml|.Rapp.history|.RData|.Renviron.R

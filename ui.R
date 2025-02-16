@@ -5,6 +5,7 @@ ui <- fluidPage(
     tags$style(
       HTML("
     /* Styling for the slider */
+    
     .irs-bar {
       background: green !important;
       border-top: 1px solid black !important;
