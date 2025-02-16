@@ -1,5 +1,5 @@
 ui <- fluidPage(
-
+  
   # --- Load Custom Fonts & Styles ---
   tags$head(
     tags$style(
@@ -48,7 +48,7 @@ ui <- fluidPage(
     /* Responsive Sidebar Behavior */
     @media (max-width: 1024px) {
       .sticky-sidebar {
-        position: relative !important;
+        position: relative !important; 
         width: 100% !important;
         max-width: 100% !important;
       }
@@ -73,7 +73,7 @@ ui <- fluidPage(
     ),
     tags$link(rel = "stylesheet", type = "text/css")
   ),
-
+  
   # --- Title Panel ---
   fluidRow(
     column(
@@ -97,69 +97,28 @@ ui <- fluidPage(
       )
     )
   ),
-
+  
   # --- Sidebar & Main Panel Layout ---
   fluidRow(
-
+    
     # --- Sidebar Panel (User Inputs) ---
     column(
-      width = 4, # Sidebar takes 4 columns (1/3 of screen)
+      width = 4,  # Sidebar takes 4 columns (1/3 of screen)
       class = "sticky-sidebar",
       div(
-        selectInput(
-          "dep_date",
-          "Select Departure Date:",
-          choices = departure_dates
-        ),
-        selectInput(
-          "route",
-          "Select Sector:",
-          choices = routes
-        ),
-        sliderInput(
-          "top_n_train",
-          "Most Recent Training Window (%):",
-          min = 0,
-          max = 100,
-          value = 100,
-          step = 1
-        ),
-        sliderInput(
-          "test_slice",
-          "Set Testing Slice (%):",
-          min = 0,
-          max = 100,
-          value = 20,
-          step = 1
-        ),
-        sliderInput(
-          "proph_changepoint_num",
-          "Set Prophet Changepoints:",
-          min = 0,
-          max = 7,
-          value = 1,
-          step = 1
-        ),
-        actionButton(
-          "apply_filters",
-          "Apply Filters",
-          class = "btn-primary",
-          style = "
-          width:100%;
-          background-color:#D71920;
-          border: 2px solid black;
-          font-size:16px;
-          font-weight:600;
-          padding:10px;
-          margin-top:15px;
-          "
-        )
+        selectInput("dep_date", "Select Departure Date:", choices = departure_dates),
+        selectInput("route", "Select Sector:", choices = routes),
+        sliderInput("top_n_train", "Most Recent Training Window (%):", min = 0, max = 100, value = 100, step = 1),
+        sliderInput("test_slice", "Set Testing Slice (%):", min = 0, max = 100, value = 20, step = 1),
+        sliderInput("proph_changepoint_num", "Set Prophet Changepoints:", min = 0, max = 7, value = 1, step = 1),
+        actionButton("apply_filters", "Apply Filters", class = "btn-primary", 
+                     style = "width:100%; background-color:#D71920; border: 2px solid black; font-size:16px; font-weight:600; padding:10px; margin-top:15px;")
       )
     ),
-
+    
     # --- Main Panel (Output Display) ---
     column(
-      width = 8, # Main panel takes 8 columns (2/3 of screen)
+      width = 8,  # Main panel takes 8 columns (2/3 of screen)
       div(
         plotlyOutput("forecast_plot", width = "100%"),
         style = "
@@ -169,7 +128,7 @@ ui <- fluidPage(
         box-shadow: 3px 3px 15px rgba(0,0,0,0.1);
         "
       ),
-
+      
       # --- Historical Trends Title ---
       div(
         uiOutput("historical_title"),
@@ -182,10 +141,10 @@ ui <- fluidPage(
         padding-top: 15px;
         "
       ),
-
+      
       # --- Historical Trend Plots ---
       plotOutput("historical_plots"),
-
+      
       # --- AI-Generated Insights Section ---
       h3(
         "Analysis of Projections",
@@ -207,7 +166,7 @@ ui <- fluidPage(
         padding: 15px;
         "
       ),
-
+      
       # --- Model Accuracy Metrics Table ---
       h3(
         "Model Performance Metrics",
