@@ -39,6 +39,8 @@ library(plotly) # Interactive visualizations
 library(DT) # Interactive data tables
 library(openai) # OpenAI module
 library(memoise) # Caching for better performance
+library(imputeTS)
+library(zoo)
 library(shinyjs)
 library(shinycssloaders)
 library(shinyWidgets)
@@ -113,34 +115,18 @@ dataset_long <- dataset %>%
   ) %>%
   mutate(
     WeekendDeparture = ifelse(
-      test = wday(
-        departure_Date,
-        label = TRUE,
-        abbr = FALSE
-      ) %in% weekend_definition,
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% weekend_definition,
       yes = 1,
       no = 0
     ),
     `Days Before Departure` = as.numeric(
       gsub("[^0-9]", "", `Days Before Departure`)
     )
-  ) %>%
-  group_by(departure_Date, Origin_Destination) %>%
-  filter(
-    `Days Before Departure` <= max(
-      `Days Before Departure`[!is.na(`Seats Sold`)],
-      na.rm = TRUE
-    )
-  ) %>%
-  mutate(
-    # In case there are missing seats in continuous series
-    # we replace them with the average of sea
-    `Seats Sold` = round(ifelse(
-      test = is.na(`Seats Sold`),
-      yes = (lead(`Seats Sold`) + lag(`Seats Sold`)) / 2,
-      no = `Seats Sold`
-    ))
-  ) %>%
+  ) %>% 
+  arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>% 
+  group_by(departure_Date, Origin_Destination) %>% 
+  complete(`Days Before Departure` = full_seq(`Days Before Departure`, 1)) %>% 
+  mutate(`Seats Sold` = round(na_kalman(`Seats Sold`, model="auto.arima"))) %>% 
   ungroup() %>%
   group_by(Origin_Destination, departure_Date) %>%
   arrange(
@@ -196,13 +182,10 @@ output_long <- output %>%
       na.rm = TRUE
     )
   ) %>%
-  mutate(
-    `Seats Sold` = round(ifelse(
-      test = is.na(`Seats Sold`),
-      yes = (lead(`Seats Sold`) + lag(`Seats Sold`)) / 2,
-      no = `Seats Sold`
-    ))
-  ) %>%
+  arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>%  
+  group_by(departure_Date, Origin_Destination) %>% 
+  complete(`Days Before Departure` = full_seq(`Days Before Departure`, 1)) %>% 
+  mutate(`Seats Sold` = round(na_kalman(`Seats Sold`, model="auto.arima"))) %>% 
   ungroup() %>%
   group_by(Origin_Destination, departure_Date) %>%
   arrange(

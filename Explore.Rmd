@@ -22,6 +22,8 @@ library(lubridate)
 library(timeDate)
 library(gridExtra)
 library(mgcv)
+library(imputeTS)
+library(zoo)
 library(openai)
 
 # Load dataset (Historical booking curves)
@@ -233,14 +235,8 @@ historical_summary_weekend <- dataset_long %>%
 ```
 
 
-
-
-
-
-
-
 ```{r}
-dep_date <- "2023-03-12"
+dep_date <- "2023-03-10"
 route <- "DXB-XXX"
 
 
@@ -291,7 +287,12 @@ splits <- time_series_split(
   cumulative = TRUE
 )
 
-model_arima <- arima_reg() %>%
+model_arima <- arima_reg(
+      # p (Autoregressive Order)
+      non_seasonal_ar = 2,
+  non_seasonal_differences = 1,
+  non_seasonal_ma = 1
+      ) %>%
   set_engine("auto_arima") %>%
   fit(
     `Seats Sold` ~ `Date Before Departure`,

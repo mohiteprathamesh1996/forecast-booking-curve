@@ -147,7 +147,16 @@ server <- function(input, output) {
     # --- Model Definitions ---
     # 1. ARIMA Model
     start_time_arima <- Sys.time()
-    model_arima <- arima_reg() %>%
+    model_arima <- arima_reg(
+      # p (Autoregressive Order)
+      non_seasonal_ar = 2,      
+      
+      # d (Differencing Order)
+      non_seasonal_differences = 2, 
+      
+      # q (Moving Average Order)
+      non_seasonal_ma = 1
+      ) %>%
       set_engine("auto_arima") %>%
       fit(`Seats Sold` ~ `Date Before Departure`, training(splits))
     end_time_arima <- Sys.time()
