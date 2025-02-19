@@ -30,15 +30,16 @@ jobs:
 
       - name: Install required R packages
         run: |
-          list_of_packages <- c(
-              "shiny", "dplyr", "ggplot2", "scales", "tidyr", "readr",
-              "forecast", "prophet", "modeltime", "tidymodels", "timetk",
-              "lubridate", "timeDate", "gridExtra", "mgcv", "plotly", "DT",
-              "openai", "memoise", "imputeTS", "zoo", "shinyjs",
-              "shinycssloaders", "shinyWidgets"
-              )
-              
-          install.packages(list_of_packages)
+          install.packages(
+          c(
+            "shiny", "dplyr", "ggplot2", "scales", "tidyr", "readr",
+            "forecast", "prophet", "modeltime", "tidymodels", "timetk",
+            "lubridate", "timeDate", "gridExtra", "mgcv", "plotly", "DT",
+            "openai", "memoise", "imputeTS", "zoo", "shinyjs",
+            "shinycssloaders", "shinyWidgets"
+            ), 
+            dependencies=TRUE
+            )
           
         shell: Rscript {0}
 
@@ -54,41 +55,16 @@ jobs:
           SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
           SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
         run: |
-          list_of_packages <- c(
-              "rsconnect", "shiny", "dplyr", "ggplot2", "scales", "tidyr", "readr",
-              "forecast", "prophet", "modeltime", "tidymodels", "timetk",
-              "lubridate", "timeDate", "gridExtra", "mgcv", "plotly", "DT",
-              "openai", "memoise", "imputeTS", "zoo", "shinyjs",
-              "shinycssloaders", "shinyWidgets"
-              )
-              
-          install.packages(list_of_packages)
-          
-          library(rsconnect)
-          library(shiny)
-          library(dplyr)
-          library(ggplot2)
-          library(scales)
-          library(tidyr)
-          library(readr)
-          library(forecast)
-          library(prophet)
-          library(modeltime)
-          library(tidymodels)
-          library(timetk)
-          library(lubridate)
-          library(timeDate)
-          library(gridExtra)
-          library(mgcv)
-          library(plotly)
-          library(DT)
-          library(openai)
-          library(memoise)
-          library(imputeTS)
-          library(zoo)
-          library(shinyjs)
-          library(shinycssloaders)
-          library(shinyWidgets)
+          install.packages(
+          c(
+            "shiny", "dplyr", "ggplot2", "scales", "tidyr", "readr",
+            "forecast", "prophet", "modeltime", "tidymodels", "timetk",
+            "lubridate", "timeDate", "gridExtra", "mgcv", "plotly", "DT",
+            "openai", "memoise", "imputeTS", "zoo", "shinyjs",
+            "shinycssloaders", "shinyWidgets"
+            ), 
+            dependencies=TRUE
+            )
           
           rsconnect::setAccountInfo(
             name = Sys.getenv("SHINYAPPS_ACCOUNT"),
