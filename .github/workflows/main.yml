@@ -55,6 +55,17 @@ jobs:
           SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
           SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
         run: |
+          list_of_packages <- c(
+              "rsconnect", "shiny", "dplyr", "ggplot2", "scales", "tidyr", "readr",
+              "forecast", "prophet", "modeltime", "tidymodels", "timetk",
+              "lubridate", "timeDate", "gridExtra", "mgcv", "plotly", "DT",
+              "openai", "memoise", "imputeTS", "zoo", "shinyjs",
+              "shinycssloaders", "shinyWidgets"
+              )
+              
+          new_packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
+          
+          if(length(new_packages)) install.packages(new_packages, dependencies = TRUE)
           library(rsconnect)
           library(shiny)
           library(dplyr)
