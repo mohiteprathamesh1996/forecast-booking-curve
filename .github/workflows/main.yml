@@ -38,9 +38,8 @@ jobs:
               "shinycssloaders", "shinyWidgets"
               )
               
-          new_packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
+          install.packages(list_of_packages)
           
-          if(length(new_packages)) install.packages(new_packages, dependencies = TRUE)
         shell: Rscript {0}
 
       - name: Verify installed packages
@@ -63,9 +62,8 @@ jobs:
               "shinycssloaders", "shinyWidgets"
               )
               
-          new_packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
+          install.packages(list_of_packages)
           
-          if(length(new_packages)) install.packages(new_packages, dependencies = TRUE)
           library(rsconnect)
           library(shiny)
           library(dplyr)
