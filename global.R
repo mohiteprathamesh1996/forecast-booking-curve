@@ -126,7 +126,13 @@ dataset_long <- dataset %>%
   arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>% 
   group_by(departure_Date, Origin_Destination) %>% 
   complete(`Days Before Departure` = full_seq(`Days Before Departure`, 1)) %>% 
-  mutate(`Seats Sold` = round(na_kalman(`Seats Sold`, model="auto.arima"))) %>% 
+  mutate(`Seats Sold` = round(
+    na_kalman(
+      `Seats Sold`, 
+      model="StructTS"
+      )
+    )
+    ) %>% 
   ungroup() %>%
   group_by(Origin_Destination, departure_Date) %>%
   arrange(
@@ -185,7 +191,13 @@ output_long <- output %>%
   arrange(departure_Date, Origin_Destination, `Days Before Departure`) %>%  
   group_by(departure_Date, Origin_Destination) %>% 
   complete(`Days Before Departure` = full_seq(`Days Before Departure`, 1)) %>% 
-  mutate(`Seats Sold` = round(na_kalman(`Seats Sold`, model="auto.arima"))) %>% 
+  mutate(`Seats Sold` = round(
+    na_kalman(
+      `Seats Sold`, 
+      model="StructTS"
+      )
+    )
+    ) %>% 
   ungroup() %>%
   group_by(Origin_Destination, departure_Date) %>%
   arrange(
