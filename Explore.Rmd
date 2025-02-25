@@ -6,6 +6,8 @@ output: html_document
 ---
 
 
+# Data Cleaning
+
 ```{r}
 library(dplyr)
 library(ggplot2)
@@ -24,6 +26,9 @@ library(gridExtra)
 library(mgcv)
 library(imputeTS)
 library(zoo)
+library(furrr)
+library(Metrics)
+library(MLmetrics)
 library(openai)
 
 # Load dataset (Historical booking curves)
@@ -110,17 +115,33 @@ dataset_long <- dataset %>%
       no = `Seats Sold`
     ))
   ) %>%
+  mutate(`Seats Sold` = ifelse(`Seats Sold`<=0, 0, `Seats Sold`)) %>% 
   ungroup() %>%
   group_by(Origin_Destination, departure_Date) %>%
   arrange(
     Origin_Destination,
     departure_Date,
     `Days Before Departure`
-  ) %>%
+  ) %>%  
   mutate(
-    DailyBookingRate = `Seats Sold` - lead(`Seats Sold`),
+    rolling_mean = rollmean(`Seats Sold`, k = 3, fill = NA, align = "right"),
+    residual = `Seats Sold` - rolling_mean
+  ) %>% 
+  mutate(
+    threshold = 2 * sd(residual, na.rm = TRUE)
+    ) %>% 
+  mutate(
+    `Seats Sold Outliers Removed` = ifelse(
+      residual > threshold & `Days Before Departure`>10, 
+      NA, 
+      `Seats Sold`
+      )
+  ) %>% 
+  ungroup() %>% 
+  mutate(
+    DailyBookingRate = `Seats Sold Outliers Removed` - lead(`Seats Sold Outliers Removed`),
     BookingRateAccelaration = DailyBookingRate - lead(DailyBookingRate),
-    PercentageTargetReached = `Seats Sold` / Target
+    PercentageTargetReached = `Seats Sold Outliers Removed` / Target
   ) %>%
   ungroup() %>%
   mutate(
@@ -167,6 +188,7 @@ output_long <- output %>%
       no = `Seats Sold`
     ))
   ) %>%
+  mutate(`Seats Sold` = ifelse(`Seats Sold`<=0, 0, `Seats Sold`)) %>%
   ungroup() %>%
   group_by(Origin_Destination, departure_Date) %>%
   arrange(
@@ -235,6 +257,240 @@ historical_summary_weekend <- dataset_long %>%
 ```
 
 
+
+
+
+```{r}
+dataset %>%
+  group_by(
+    Origin_Destination,
+    WeekendDeparture = ifelse(
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% weekend_definition,
+      yes = 1,
+      no = 0
+    )
+  ) %>%
+  summarise(
+    .groups = "drop",
+    across(-departure_Date, ~ round(mean(.x, na.rm = TRUE)),
+      .names = "{.col}"
+    )
+  ) %>%
+  ungroup()
+```
+
+
+```{r}
+dataset %>%
+  pivot_longer(
+    cols = starts_with("X"),
+    names_to = "Days Before Departure",
+    values_to = "Seats Sold"
+  ) %>%
+  mutate(
+    `Seats Sold` = ifelse(`Seats Sold`<=0, 0, `Seats Sold`),
+    WeekendDeparture = ifelse(
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% weekend_definition,
+      yes = 1,
+      no = 0
+    ),
+    `Days Before Departure` = as.numeric(
+      gsub("[^0-9]", "", `Days Before Departure`)
+    )
+  ) %>% 
+  ungroup() %>%
+  group_by(Origin_Destination, departure_Date) %>%
+  arrange(
+    Origin_Destination,
+    departure_Date,
+    `Days Before Departure`
+  ) %>%  
+  mutate(
+    rolling_mean = rollmean(`Seats Sold`, k = 3, fill = NA, align = "right"),
+    residual = `Seats Sold` - rolling_mean
+  ) %>% 
+  mutate(
+    threshold = 2 * sd(residual, na.rm = TRUE)
+  ) %>% 
+  mutate(
+    `Seats Sold Outliers Removed` = ifelse(
+      residual > threshold & `Days Before Departure`>10, 
+      NA, 
+      `Seats Sold`
+    )
+  ) %>% 
+  ungroup() %>%
+  mutate(`Seats Sold` = round(
+    na_kalman(
+      `Seats Sold`,
+      model = "StructTS"
+    )
+  )) %>% 
+  group_by(Origin_Destination, WeekendDeparture, `Days Before Departure`) %>% 
+  summarise(MEAND = round(mean(`Seats Sold`))) %>% 
+  mutate(
+    `Days Before Departure` = paste(
+      "X", 
+      `Days Before Departure`, 
+      "_SeatsSold_sum",
+      sep = ""
+      )
+    ) %>% 
+  pivot_wider(
+    names_from = `Days Before Departure`, 
+    values_from = MEAND
+    ) %>% 
+  ungroup() 
+  mutate(
+    across(
+      -c(
+        Origin_Destination,
+        X0_SeatsSold_sum,
+        WeekendDeparture
+      ),
+      ~ Target - .,
+      .names = "{.col}"
+    )
+  ) %>%
+  select(-Target) %>%
+  pivot_longer(
+    cols = starts_with("X"),
+    names_to = "Days Before Departure",
+    values_to = "AvgPickUp"
+  ) %>%
+  mutate(
+    `Days Before Departure` = as.numeric(
+      gsub("[^0-9]", "", `Days Before Departure`)
+    )
+  ) %>%
+  drop_na()
+```
+
+
+```{r}
+dataset %>% 
+  group_by(
+    Origin_Destination,
+    WeekendDeparture = ifelse(
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% weekend_definition,
+      yes = 1,
+      no = 0
+    )
+    ) %>% 
+  summarise(
+    .groups = "drop", 
+    Target = round(mean(Target))
+    ) %>% 
+  left_join(
+    dataset %>%
+  pivot_longer(
+    cols = starts_with("X"),
+    names_to = "Days Before Departure",
+    values_to = "Seats Sold"
+  ) %>%
+  mutate(
+    `Seats Sold` = ifelse(`Seats Sold`<=0, 0, `Seats Sold`),
+    WeekendDeparture = ifelse(
+      test = wday(departure_Date, label = TRUE, abbr = FALSE) %in% weekend_definition,
+      yes = 1,
+      no = 0
+    ),
+    `Days Before Departure` = as.numeric(
+      gsub("[^0-9]", "", `Days Before Departure`)
+    )
+  ) %>% 
+  ungroup() %>%
+  group_by(Origin_Destination, departure_Date) %>%
+  arrange(
+    Origin_Destination,
+    departure_Date,
+    `Days Before Departure`
+  ) %>%  
+  mutate(
+    rolling_mean = rollmean(`Seats Sold`, k = 3, fill = NA, align = "right"),
+    residual = `Seats Sold` - rolling_mean
+  ) %>% 
+  mutate(
+    threshold = 2 * sd(residual, na.rm = TRUE)
+  ) %>% 
+  mutate(
+    `Seats Sold Outliers Removed` = ifelse(
+      residual > threshold & `Days Before Departure`>10, 
+      NA, 
+      `Seats Sold`
+    )
+  ) %>% 
+  ungroup() %>%
+  mutate(`Seats Sold` = round(
+    na_kalman(
+      `Seats Sold`,
+      model = "StructTS"
+    )
+  )) %>% 
+  group_by(Origin_Destination, WeekendDeparture, `Days Before Departure`) %>% 
+  summarise(MEAND = round(mean(`Seats Sold`))) %>% 
+  mutate(
+    `Days Before Departure` = paste(
+      "X", 
+      `Days Before Departure`, 
+      "_SeatsSold_sum",
+      sep = ""
+      )
+    ) %>% 
+  pivot_wider(
+    names_from = `Days Before Departure`, 
+    values_from = MEAND
+    ) %>% 
+  ungroup(),
+    by = c("Origin_Destination", "WeekendDeparture")
+  ) %>% 
+  mutate(
+    across(
+      -c(
+        Origin_Destination,
+        X0_SeatsSold_sum,
+        WeekendDeparture
+      ),
+      ~ Target - .,
+      .names = "{.col}"
+    )
+  ) %>%
+  select(-Target) %>%
+  pivot_longer(
+    cols = starts_with("X"),
+    names_to = "Days Before Departure",
+    values_to = "AvgPickUp"
+  ) %>%
+  mutate(
+    `Days Before Departure` = as.numeric(
+      gsub("[^0-9]", "", `Days Before Departure`)
+    )
+  ) %>%
+  drop_na() %>% 
+  mutate(
+    AvgPickUp = ifelse(`Days Before Departure`==0, 0, AvgPickUp)
+    )
+```
+
+
+
+```{r}
+pickup_info_weekend %>% 
+  filter(Origin_Destination=="DXB-XXX", `Days Before Departure`==0)
+```
+
+
+
+
+
+
+
+
+
+
+
+# Original Solution
+
 ```{r}
 dep_date <- "2023-03-10"
 route <- "DXB-XXX"
@@ -283,7 +539,6 @@ days_ahead <- output_long %>%
 splits <- time_series_split(
   data = train,
   assess = paste(round(0.20 * nrow(train)), "days"),
-  # assess = paste(days_ahead, "days"),
   cumulative = TRUE
 )
 
@@ -420,7 +675,6 @@ calib_tbl %>%
     )
   )
 ```
-
 
 
 
