@@ -115,8 +115,8 @@ server <- function(input, output) {
         AvgPickUp
       ) %>%
       arrange(`Date Before Departure`) %>%
-      drop_na()  %>%
-      filter_all(all_vars(!is.infinite(.))) 
+      drop_na() %>%
+      filter_all(all_vars(!is.infinite(.)))
 
     # Keep the most recent data based on the user-selected training percentage
     train <- train %>%
@@ -319,8 +319,8 @@ server <- function(input, output) {
       # Construct AI query
       query <- paste(
         "As an airline revenue management expert, analyze the forecasted booking
-        curve including the confidence intervals for an upcoming flight, 
-        detailing expected demand patterns and commercial implications 
+        curve including the confidence intervals for an upcoming flight,
+        detailing expected demand patterns and commercial implications
         leading up to departure.",
         "\n\n**Booking Data Analysis:**",
         "The ACTUAL seat bookings over time:",
