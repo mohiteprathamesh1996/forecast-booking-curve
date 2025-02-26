@@ -521,7 +521,7 @@ server <- function(input, output) {
           "Booking Curve for", input$route, "on", dep_date,
           paste(
             "[Target = ", target_cap,
-            " seats; Prediction Days Ahead = ", days_ahead,
+            " seats; Prediction Days Ahead = ", days_ahead,"]",
             sep = ""
           )
         )
