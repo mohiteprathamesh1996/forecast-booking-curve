@@ -1,12 +1,12 @@
 ui <- fluidPage(
-  
+
   # --- Load External HTML & CSS ---
   includeHTML("www/custom_ui.html"),
   includeCSS("www/styles.css"),
-  
+
   # --- Sidebar & Main Panel Layout ---
   fluidRow(
-    
+
     # --- Sidebar Panel (User Inputs) ---
     column(
       width = 4, # Sidebar takes 4 columns
@@ -54,7 +54,7 @@ ui <- fluidPage(
         )
       )
     ),
-    
+
     # --- Main Panel (Output Display) ---
     column(
       width = 8, # Main panel takes 8 columns
@@ -67,7 +67,7 @@ ui <- fluidPage(
         box-shadow: 3px 3px 15px rgba(0,0,0,0.1);
         "
       ),
-      
+
       # --- Historical Trends Title ---
       div(
         uiOutput("historical_title"),
@@ -80,10 +80,10 @@ ui <- fluidPage(
         padding-top: 15px;
         "
       ),
-      
+
       # --- Historical Trend Plots ---
       plotOutput("historical_plots"),
-      
+
       # --- AI-Generated Insights Section ---
       h3(
         "Analysis of Projections",
@@ -105,7 +105,7 @@ ui <- fluidPage(
         padding: 15px;
         "
       ),
-      
+
       # --- Model Accuracy Metrics Table ---
       h3(
         "Model Performance Metrics (Walk-Forward Validation)",
