@@ -126,14 +126,20 @@ server <- function(input, output) {
       ))
 
     # --- Extract Forecasting Parameters ---
-    target_cap <- filtered_data() %>%
-      pull(Target) %>%
-      unique()
+    ## --- 1. Target number of seats on the day of departure ---
+    target_cap <- forecast_risk_summary %>%
+      filter(departure_Date == dep_date & Origin_Destination == route) %>%
+      pull(Target)
 
-    days_ahead <- filtered_data() %>%
-      pull(`Days Before Departure`) %>%
-      min() # Find the minimum "Days Before Departure" for forecasting
+    ## --- 2. Find the minimum "Days Before Departure" for forecasting ---
+    days_ahead <- forecast_risk_summary %>%
+      filter(departure_Date == dep_date & Origin_Destination == route) %>%
+      pull(`Prediction Ahead`)
 
+    ## --- 3. How reliable are the forecasts based on available data ---
+    risk_msg <- forecast_risk_summary %>%
+      filter(departure_Date == dep_date & Origin_Destination == route) %>%
+      pull(Risk)
 
     # Enable parallel processing
     plan(multisession)
@@ -518,10 +524,11 @@ server <- function(input, output) {
         .x_lab = "Date before Departure",
         .y_lab = "Seats Sold",
         .title = paste(
-          "Booking Curve for", input$route, "on", dep_date,
+          "Booking Curve for", route, "on", dep_date,
           paste(
             "[Target = ", target_cap,
-            " seats; Prediction Days Ahead = ", days_ahead,"]",
+            " seats; Prediction Window = ", days_ahead,
+            " Days; ", risk_msg, "]",
             sep = ""
           )
         )

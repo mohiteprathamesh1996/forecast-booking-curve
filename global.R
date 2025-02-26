@@ -307,6 +307,39 @@ historical_summary_weekend <- dataset_long %>%
   ungroup() %>%
   drop_na()
 
+# --- Forecast Stability & Risk Assessment Table ---
+forecast_risk_summary <- output_long %>%
+  group_by(departure_Date, Origin_Destination, Target) %>%
+  summarise(
+    .groups = "drop",
+    `Training Points` = 1 + max(`Days Before Departure`) - min(`Days Before Departure`),
+    `Prediction Ahead` = min(`Days Before Departure`)
+  ) %>%
+  mutate(
+    `Prediction Ratio` = round(100 * `Prediction Ahead` / `Training Points`, 2),
+
+    # Revamped Risk Logic
+    Risk = case_when(
+      `Prediction Ratio` <= 50 ~ "🟢 Low Risk - Reliable Forecasting",
+      `Prediction Ratio` <= 100 ~ "🟡 Medium Risk - Monitor Accuracy",
+      `Prediction Ratio` <= 140 ~ "🟠 High Risk - Unstable Forecasting",
+      TRUE ~ "🔴 Very High Risk - Limited Data"
+    )
+  ) %>%
+  filter(
+    Risk %in% c(
+      "🟢 Low Risk - Reliable Forecasting",
+      "🟡 Medium Risk - Monitor Accuracy",
+      "🟠 High Risk - Unstable Forecasting"
+      # "🔴 Very High Risk - Limited Data"
+    )
+  )
+
 # --- Extract Unique Departure Dates and Routes for Dropdowns ---
-departure_dates <- unique(output_long$departure_Date) # Unique departure dates
-routes <- unique(output_long$Origin_Destination) # Unique flight routes
+departure_dates <- forecast_risk_summary %>%
+  pull(departure_Date) %>%
+  unique()
+
+routes <- forecast_risk_summary %>%
+  pull(Origin_Destination) %>%
+  unique()

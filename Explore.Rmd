@@ -320,6 +320,30 @@ historical_summary_weekend <- dataset_long %>%
 # --- Extract Unique Departure Dates and Routes for Dropdowns ---
 departure_dates <- unique(output_long$departure_Date) # Unique departure dates
 routes <- unique(output_long$Origin_Destination) # Unique flight routes
+
+
+forecast_risk_summary <- output_long %>%
+  group_by(
+    departure_Date,
+    Origin_Destination,
+    Target
+  ) %>%
+  summarise(
+    .groups = "drop",
+    `Training Points` = 1 + max(`Days Before Departure`) - min(`Days Before Departure`),
+    `Prediction Ahead` = min(`Days Before Departure`)
+  ) %>%
+  mutate(
+    `Prediction Ratio` = round(100 * `Prediction Ahead` / `Training Points`, 2),
+
+    # Revamped Risk Logic
+    Risk = case_when(
+      `Prediction Ratio` <= 50 ~ "🟢 Low Risk - Reliable Forecasting",
+      `Prediction Ratio` <= 100 ~ "🟡 Medium Risk - Monitor Accuracy",
+      `Prediction Ratio` <= 140 ~ "🟠 High Risk - Unstable Forecasting",
+      TRUE ~ "🔴 Very High Risk - Limited Data"
+    )
+  )
 ```
 
 
@@ -515,8 +539,17 @@ calib_tbl %>%
 
 # Modified Solution based on walk-forward testing
 
+```{r}
+forecast_risk_summary %>%
+  filter(
+    departure_Date == dep_date &
+      Origin_Destination == route
+  )
+```
+
+
 ```{r, warning=FALSE}
-dep_date <- "2023-06-11"
+dep_date <- "2023-03-13"
 route <- "DXB-XXX"
 
 
@@ -540,21 +573,17 @@ train <- output_long %>%
   arrange(`Date Before Departure`) %>%
   drop_na()
 
-target_cap <- output_long %>%
-  filter(
-    departure_Date == dep_date &
-      Origin_Destination == route
-  ) %>%
-  pull(Target) %>%
-  unique()
+target_cap <- forecast_risk_summary %>%
+  filter(departure_Date == dep_date & Origin_Destination == route) %>%
+  pull(Target)
 
-days_ahead <- output_long %>%
-  filter(
-    departure_Date == dep_date &
-      Origin_Destination == route
-  ) %>%
-  pull(`Days Before Departure`) %>%
-  min()
+days_ahead <- forecast_risk_summary %>%
+  filter(departure_Date == dep_date & Origin_Destination == route) %>%
+  pull(`Prediction Ahead`)
+
+risk_msg <- forecast_risk_summary %>%
+  filter(departure_Date == dep_date & Origin_Destination == route) %>%
+  pull(Risk)
 
 # Enable parallel processing
 plan(multisession)
@@ -562,7 +591,7 @@ plan(multisession)
 splits <- rolling_origin(
   data = train,
   initial = round(0.80 * nrow(train)),
-  assess = 30,
+  assess = 10,
   cumulative = FALSE
 )
 
@@ -777,10 +806,49 @@ model_tbl %>%
     .y_lab = "Seats Sold",
     .title = paste(
       "Booking Curve for", route, "on", dep_date,
-      paste("(Target =", target_cap, " seats)", sep = "")
+      paste(
+        "[Target = ", target_cap,
+        " seats; Prediction Days Ahead = ", days_ahead,
+        "; ", risk_msg, "]",
+        sep = ""
+      )
     )
   )
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,0 +1,62 @@
+/* Styling for the slider */
+.irs-bar {
+  background: green !important;
+  border-top: 1px solid black !important;
+  border-bottom: 1px solid black !important;
+}
+
+.irs-line {
+  background: #f5f5f5 !important;
+}
+
+.irs-handle {
+  border: 2px solid black !important;
+  background: #D71920 !important;
+  border-radius: 50% !important;
+}
+
+.irs-single, .irs-from, .irs-to {
+  background: black !important;
+  color: white !important;
+  font-weight: bold;
+}
+
+.irs-handle:hover {
+  background: black !important;
+  border: 2px solid black !important;
+}
+
+/* Sticky Sidebar */
+.sticky-sidebar {
+  position: sticky;
+  top: 10px;
+  background-color: #FAF6F0;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+  z-index: 1000;
+  width: 100%;
+  max-width: 400px;
+}
+
+@media (max-width: 1024px) {
+  .sticky-sidebar {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Title Panel */
+.title-container {
+  padding: 20px;
+  background: linear-gradient(to right, #E7E3D4, white);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.title-container h1 {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  color: #D71920;
+}
