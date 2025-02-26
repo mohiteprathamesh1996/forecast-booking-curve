@@ -128,21 +128,21 @@ ui <- fluidPage(
           step = 1
         ),
         sliderInput(
-          "test_slice",
-          "Set Testing Slice (%):",
-          min = 0,
-          max = 100,
+          "assess",
+          "Walk Forward Forecasting Window:",
+          min = 5,
+          max = 60,
           value = 20,
           step = 1
         ),
-        sliderInput(
-          "proph_changepoint_num",
-          "Set Prophet Changepoints:",
-          min = 0,
-          max = 7,
-          value = 1,
-          step = 1
-        ),
+        # sliderInput(
+        #   "proph_changepoint_num",
+        #   "Set Prophet Changepoints:",
+        #   min = 0,
+        #   max = 7,
+        #   value = 1,
+        #   step = 1
+        # ),
         actionButton(
           "apply_filters",
           "Apply Filters",
@@ -213,7 +213,7 @@ ui <- fluidPage(
 
       # --- Model Accuracy Metrics Table ---
       h3(
-        "Model Performance Metrics",
+        "Model Performance Metrics (Walk-Forward Validation)",
         style = "
         font-family: 'Oswald', sans-serif;
         font-weight: 600;

@@ -66,7 +66,7 @@ server <- function(input, output) {
             y = AvgPickUp
           )
         ) +
-        geom_line(na.rm = TRUE, color = "#D71920", size = 0.8) +
+        geom_line(na.rm = TRUE, color = "#D71920", linewidth = 0.8) +
         theme_bw(),
       historical_summary_weekend %>%
         filter(
@@ -88,7 +88,7 @@ server <- function(input, output) {
             y = DailyBookingRate
           )
         ) +
-        geom_line(na.rm = TRUE, color = "darkgreen", size = 0.8) +
+        geom_line(na.rm = TRUE, color = "darkgreen", linewidth = 0.8) +
         theme_bw()
     )
   })
@@ -134,121 +134,93 @@ server <- function(input, output) {
       pull(`Days Before Departure`) %>%
       min() # Find the minimum "Days Before Departure" for forecasting
 
+
+    # Enable parallel processing
+    plan(multisession)
+
     # --- Time Series Split for Model Training ---
-    splits <- time_series_split(
+    splits <- rolling_origin(
       data = train,
-      # Define test data size
-      assess = round(((input$test_slice) / 100) * nrow(train)),
-      cumulative = TRUE
-    )
-
-    # Identify test start date
-    test_start_date <- min(testing(splits)$`Date Before Departure`)
-
-    # --- Model Definitions ---
-    # 1. ARIMA Model
-    start_time_arima <- Sys.time()
-    model_arima <- arima_reg(
-      # p (Autoregressive Order)
-      non_seasonal_ar = 2,
-
-      # d (Differencing Order)
-      non_seasonal_differences = 2,
-
-      # q (Moving Average Order)
-      non_seasonal_ma = 1
-    ) %>%
-      set_engine("auto_arima") %>%
-      fit(`Seats Sold` ~ `Date Before Departure`, training(splits))
-    end_time_arima <- Sys.time()
-    time_arima <- as.numeric(
-      difftime(
-        end_time_arima,
-        start_time_arima,
-        units = "secs"
-      )
-    )
-
-    # 2. Prophet Model (Logistic Growth)
-    start_time_prophet <- Sys.time()
-    model_prophet <- prophet_reg(
-      growth = "logistic",
-      logistic_cap = target_cap
-    ) %>%
-      set_engine("prophet") %>%
-      fit(`Seats Sold` ~ `Date Before Departure`, training(splits))
-    end_time_prophet <- Sys.time()
-    time_prophet <- as.numeric(
-      difftime(
-        end_time_prophet,
-        start_time_prophet,
-        units = "secs"
-      )
+      initial = round(0.80 * nrow(train)),
+      assess = input$assess,
+      cumulative = FALSE
     )
 
 
-    # 3. Prophet Model with Additional Regressor(s)
-    start_time_prophet_reg <- Sys.time()
-    model_prophet_with_reg <- prophet_reg(
-      growth = "logistic",
-      season = "multiplicative",
-      logistic_cap = target_cap,
-      changepoint_num = input$proph_changepoint_num
-    ) %>%
-      set_engine("prophet") %>%
-      fit(
-        `Seats Sold` ~ `Date Before Departure` +
-          DailyBookingRate +
-          LF_PercentageTargetReached +
-          AvgPickUp,
-        training(splits)
-      )
-    end_time_prophet_reg <- Sys.time()
-    time_prophet_reg <- as.numeric(
-      difftime(
-        end_time_prophet_reg,
-        start_time_prophet_reg,
-        units = "secs"
-      )
-    )
-
-    # --- Model Calibration & Accuracy Assessment ---
-    model_tbl <- modeltime_table(
-      model_arima,
-      model_prophet,
-      model_prophet_with_reg
-    ) %>%
-      mutate(
-        TrainingTime = c(
-          time_arima,
-          time_prophet,
-          time_prophet_reg
+    # Function to Train and Forecast for Each Split
+    walk_forward_results <- future_map_dfr(splits$splits, function(split) {
+      # Train ARIMA Model
+      model_arima <- arima_reg() %>%
+        set_engine("auto_arima") %>%
+        fit(
+          `Seats Sold` ~ `Date Before Departure`,
+          training(split)
         )
+
+      # Train Prophet Model (Basic)
+      model_prophet <- prophet_reg(
+        growth = "logistic",
+        logistic_cap = target_cap
+      ) %>%
+        set_engine("prophet") %>%
+        fit(
+          `Seats Sold` ~ `Date Before Departure`,
+          training(split)
+        )
+
+      # Train Prophet Model with Regressors (Optimized)
+      model_prophet_with_reg <- prophet_reg(
+        growth = "logistic",
+        season = "multiplicative",
+        logistic_cap = target_cap,
+        changepoint_num = 1
+      ) %>%
+        set_engine("prophet") %>%
+        fit(
+          `Seats Sold` ~ `Date Before Departure`
+            + DailyBookingRate
+            + LF_PercentageTargetReached,
+          training(split)
+        )
+
+      # Create Model Table for the Current Window
+      model_tbl <- modeltime_table(
+        model_arima,
+        model_prophet,
+        model_prophet_with_reg
       )
 
-    calib_tbl <- model_tbl %>%
-      select(-TrainingTime) %>%
-      modeltime_calibrate(testing(splits))
+      # Forecast for the Test Set of Current Split
+      forecast_tbl <- model_tbl %>%
+        modeltime_calibrate(testing(split)) %>%
+        modeltime_forecast(new_data = testing(split), actual_data = train) %>%
+        mutate(Window_ID = split$id) # Track which window this belongs to
+
+      return(forecast_tbl)
+    })
+
+    walk_forward_results_summary <- walk_forward_results %>%
+      filter(.model_desc != "ACTUAL") %>%
+      left_join(
+        walk_forward_results %>%
+          filter(.model_desc == "ACTUAL") %>%
+          select(.index, .actual = .value) %>%
+          distinct(.keep_all = TRUE),
+        by = ".index"
+      ) %>%
+      group_by(`Model Description` = .model_desc) %>%
+      summarise(
+        MAE = round(mae(actual = .actual, predicted = .value), 2),
+        MAPE = round(mape(actual = .actual, predicted = .value), 2),
+        MASE = round(mase(actual = .actual, predicted = .value), 2),
+        SMAPE = round(smape(actual = .actual, predicted = .value), 2),
+        RMSE = round(rmse(actual = .actual, predicted = .value), 2),
+        RSQ = round(postResample(pred = .value, obs = .actual)["Rsquared"], 2)
+      )
 
     # --- Display Model Accuracy in a Table ---
     output$accuracy_table <- renderDT({
-      calib_tbl %>%
-        modeltime_accuracy() %>%
-        mutate(
-          `Training Time (Sec)` = c(
-            time_arima,
-            time_prophet,
-            time_prophet_reg
-          ),
-          across(
-            where(is.numeric) &
-              !all_of(c(".model_id")),
-            round, 2
-          )
-        ) %>%
-        datatable(
-          options = list(pageLength = 5, autoWidth = TRUE)
-        )
+      walk_forward_results_summary
     })
 
     # --- Generate Future Forecast Data ---
@@ -296,21 +268,48 @@ server <- function(input, output) {
         `Days Before Departure` == min(`Days Before Departure`, na.rm = TRUE)
       )
 
+    model_tbl <- modeltime_table(
+      arima_reg(
+        non_seasonal_ar = 2,
+        non_seasonal_differences = 1,
+        non_seasonal_ma = 1
+      ) %>%
+        set_engine("auto_arima") %>%
+        fit(
+          `Seats Sold` ~ `Date Before Departure`,
+          train
+        ),
+      prophet_reg(
+        growth = "logistic",
+        logistic_cap = target_cap
+      ) %>%
+        set_engine("prophet") %>%
+        fit(
+          `Seats Sold` ~ `Date Before Departure`,
+          train
+        ),
+      prophet_reg(
+        growth = "logistic",
+        season = "multiplicative",
+        logistic_cap = target_cap,
+        changepoint_num = 1
+      ) %>%
+        set_engine("prophet") %>%
+        fit(
+          `Seats Sold` ~ `Date Before Departure`
+            + DailyBookingRate
+            + LF_PercentageTargetReached,
+          train
+        )
+    )
+
     # --- Generate AI Insights (OpenAI API Call) ---
     output$ai_insights <- renderUI({
       # Extract forecasted seat bookings
-      forecast_summary <- calib_tbl %>%
-        modeltime_refit(
-          data = train
-        ) %>%
+      forecast_summary <- model_tbl %>%
         modeltime_forecast(
           new_data = future_data,
           actual_data = train
-        ) %>%
-        mutate(
-          .value = round(.value),
-          .conf_lo = round(.conf_lo),
-          .conf_hi = round(.conf_hi)
         ) %>%
         filter(
           .model_desc == c("ACTUAL", "PROPHET W/ REGRESSORS")
@@ -429,7 +428,8 @@ server <- function(input, output) {
         "Deliver the response in structured paragraphs with a fact-based
         approach, avoiding bullet points or bold text. Use 'we' instead of
         'I'. Focus on data-driven insights and strategic airline
-        pricing adjustments."
+        pricing adjustments. As a side note, if projections fall
+        short by 3 or 4 points don't call it a significant lag."
       )
 
 
@@ -449,7 +449,7 @@ server <- function(input, output) {
           ),
           list(role = "user", content = query)
         ),
-        temperature = 0.2, # Keeps responses focused and fact-based
+        temperature = 0.5, # Keeps responses focused and fact-based
         max_tokens = 1000 # Ensures detailed yet concise output
       )
 
@@ -465,26 +465,45 @@ server <- function(input, output) {
     })
 
     # --- Generate Forecast Plot ---
-    forecast_plot <- calib_tbl %>%
-      modeltime_refit(
-        data = train
-      ) %>%
+    forecast_plot <- model_tbl %>%
       modeltime_forecast(
         new_data = future_data,
         actual_data = train
       ) %>%
+      left_join(
+        walk_forward_results %>%
+          filter(.model_desc != "ACTUAL") %>%
+          left_join(
+            walk_forward_results %>%
+              filter(.model_desc == "ACTUAL") %>%
+              select(.index, .actual = .value) %>%
+              distinct(.keep_all = TRUE),
+            by = ".index"
+          ) %>%
+          mutate(error = .actual - .value) %>%
+          group_by(.model_desc) %>%
+          summarise(
+            mean_error = mean(error, na.rm = TRUE),
+            sd_error = sd(error, na.rm = TRUE) # Standard deviation of errors
+          ),
+        by = ".model_desc"
+      ) %>%
+      mutate(
+        .value = round(.value),
+        .conf_lo = .value - (1.96 * sd_error), # Lower bound
+        .conf_hi = .value + (1.96 * sd_error) # Upper bound
+      ) %>%
+      select(-c(mean_error, sd_error)) %>%
       rbind(
         data.frame(
           .model_id = rep(NA, days_ahead),
-          .model_desc = rep("4_Traditional PickUp Model", days_ahead),
+          .model_desc = rep("Traditional PickUp Model", days_ahead),
           .key = rep("prediction", days_ahead),
           .index = future_data %>% pull(`Date Before Departure`) %>% sort(),
-          .value = round(
-            seq(
-              advance_pickup_df$`Seats Sold`,
-              advance_pickup_df$`Traditional Pick-Up Forecast`,
-              length.out = days_ahead
-            )
+          .value = seq(
+            advance_pickup_df$`Seats Sold`,
+            advance_pickup_df$`Traditional Pick-Up Forecast`,
+            length.out = days_ahead
           ),
           .conf_lo = rep(NA, days_ahead),
           .conf_hi = rep(NA, days_ahead)
@@ -496,12 +515,13 @@ server <- function(input, output) {
         .conf_hi = round(.conf_hi)
       ) %>%
       plot_modeltime_forecast(
-        .x_lab = "Date Before Departure",
+        .x_lab = "Date before Departure",
         .y_lab = "Seats Sold",
         .title = paste(
-          "Booking Curve for", input$route, "on", input$dep_date,
-          paste("[Target = ", target_cap, " seats; Train Obs = ", nrow(train),
-            "; ", "Predict days = ", days_ahead, "]",
+          "Booking Curve for", input$route, "on", dep_date,
+          paste(
+            "[Target = ", target_cap,
+            " seats; Prediction Days Ahead = ", days_ahead,
             sep = ""
           )
         )
@@ -509,25 +529,6 @@ server <- function(input, output) {
 
 
     # Convert GGPlot to Interactive Plotly Graph
-    ggplotly(forecast_plot) %>%
-      layout(
-        shapes = list(
-          list(
-            type = "line",
-            x0 = test_start_date, x1 = test_start_date,
-            y0 = 0, y1 = max(train$`Seats Sold`, na.rm = TRUE),
-            line = list(color = "red", width = 2, dash = "dash")
-          )
-        ),
-        annotations = list(
-          list(
-            x = test_start_date, y = max(train$`Seats Sold`, na.rm = TRUE),
-            text = "Test Start Date",
-            showarrow = TRUE,
-            arrowhead = 2,
-            ax = 20, ay = -40
-          )
-        )
-      )
+    ggplotly(forecast_plot)
   })
 }
