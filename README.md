@@ -1,96 +1,106 @@
-# Dynamic Booking Curve Forecasting
-### A Shiny Application for Forecasting Airline Booking Trends
+# ✈ **Dynamic Booking Curve Forecasting**  
+### **A Shiny Application for Intelligent Airline Demand Prediction**  
 
 ---
 
-## Overview
-This repository contains an **R Shiny** application designed to analyze and forecast airline **booking curves** dynamically. It leverages **time-series forecasting models (ARIMA, FB Prophet)** to predict seat sales and provides **AI-driven revenue insights** using **OpenAI's API**.
+## **🚀 Overview**  
+This **R Shiny** application dynamically forecasts airline **booking curves**, leveraging advanced **time-series models (ARIMA, Prophet, and ML-based regressors)**. It provides **AI-driven revenue insights**, helping airlines optimize seat allocation and pricing strategies.  
 
-The application allows users to:
-- **Visualize historical booking trends** for specific routes  
-- **Analyze demand patterns** using interactive plots  
-- **Forecast future bookings** with machine learning models  
-- **Assess model performance** with accuracy metrics  
-- **Generate AI-based commercial insights** for revenue management  
+### **🔍 Key Capabilities**  
+✔ **Visualize Historical Booking Trends** with interactive graphs.  
+✔ **Predict Seat Demand** using machine learning models.  
+✔ **Analyze Market Dynamics** through data-driven insights.  
+✔ **Optimize Revenue Strategies** with AI-generated commercial intelligence.  
+✔ **Evaluate Model Performance** with real-time accuracy metrics.  
 
-🔗 The app is now live at [Flight Booking Curve](https://prathameshmohite.shinyapps.io/flight-booking-curve/)
-
----
-
-## Features
-- **Dynamic Filtering**: Select departure dates and routes for analysis.
-- **Historical Data Insights**: Visualizes past booking trends.
-- **Forecasting Models**: ARIMA, Prophet (with and without regressors).
-- **Interactive Visualizations**: Powered by `ggplot2` & `plotly`.
-- **AI-Generated Insights**: OpenAI integration for strategic recommendations.
-- **Model Performance Metrics**: Accuracy assessment using `modeltime`.
+🔗 **Live Demo**: [Flight Booking Curve](https://prathameshmohite.shinyapps.io/flight-booking-curve/)  
 
 ---
 
-## Technologies Used
+## **✨ Features at a Glance**  
 
-| Technology   | Purpose |
-|-------------|---------|
-| `R Shiny` | Web framework for interactive UI |
-| `tidyverse` | Data manipulation & visualization |
-| `ggplot2` | Static plots for historical data |
-| `plotly` | Interactive forecasting plots |
-| `prophet` | Advanced time-series forecasting |
-| `modeltime` | Automated machine learning for forecasting |
-| `lubridate` | Handling and manipulating date-time data |
-| `shinyapps.io` | Hosting and deploying the Shiny app |
-| `OpenAI API` | AI-generated revenue insights |
+- 🛠 **Data-Driven Insights** – Explore demand trends with historical flight booking data.  
+- 📊 **Multi-Model Forecasting** – ARIMA, Prophet, and machine learning-based regressors.  
+- 📈 **Interactive Visualizations** – Built with `ggplot2`, `plotly`, and `shiny`.  
+- 🤖 **AI-Powered Revenue Strategy** – OpenAI-driven commercial insights.  
+- ⚡ **Fast & Scalable** – Optimized with `furrr` for parallel processing.  
+- 🎯 **Robust Performance Metrics** – Evaluate forecasts with RMSE, MAE, and confidence intervals.  
 
 ---
 
-## Project Structure
-```
+## **🛠 Technologies Used**  
+
+| **Technology**    | **Purpose**  |  
+|------------------|-------------|  
+| 🖥 `R Shiny`    | Interactive UI for real-time analytics  |  
+| 📊 `ggplot2`    | Static data visualizations  |  
+| 🎥 `plotly`     | Interactive forecasting plots  |  
+| 🔮 `prophet`    | Advanced time-series forecasting  |  
+| 📉 `modeltime`  | Machine learning for demand forecasting  |  
+| 📅 `lubridate`  | Date-time manipulation & processing  |  
+| 🚀 `furrr`      | Parallel computing for fast execution  |  
+| 💾 `tidyverse`  | Data wrangling and transformation  |  
+| 🌎 `shinyapps.io` | Hosting and deploying the Shiny app  |  
+| 🤖 `OpenAI API` | AI-generated revenue insights  |  
+
+---
+
+## **📁 Project Structure**  
+
+```plaintext
 Project Root
 ├── data/
 │   ├── dataset.csv        # Historical booking data
 │   ├── output.csv         # Flights requiring forecasting
-├── server.R               # Backend logic (data filtering, forecasting models, AI insights)
-├── ui.R                   # User interface layout
-├── global.R               # Load datasets and preprocess data
-├── Explore.Rmd            # Rmd for experimentation
+├── server.R               # Backend logic (data processing, forecasting, AI insights)
+├── ui.R                   # Frontend interface for interactive analysis
+├── global.R               # Data preprocessing & global variables
+├── Explore.Rmd            # Notebook for model experimentation
 ├── .github/workflows/
-│   ├── main.yml         # GitHub Actions for automatic deployment
+│   ├── main.yml           # GitHub Actions for automated deployment
 ├── README.md              # Project documentation
 ```
 
 
-## Installation & Setup
-### 1. Clone repository
+## 📦 Installation & Setup
+### 1️⃣ Clone the Repository
 ```
 git clone https://github.com/mohiteprathamesh1996/forecast-booking-curve.git
+cd forecast-booking-curve
 ```
 
-### 2. Install Required R Packages
+### 2️⃣ Install Required R Packages
 Open RStudio and run:
 ```r
 install.packages(c(
   "shiny", "dplyr", "ggplot2", "plotly", "tidyverse",
   "forecast", "prophet", "modeltime", "lubridate",
-  "timetk", "timeDate", "gridExtra", "DT"
+  "timetk", "timeDate", "gridExtra", "DT", "furrr",
+  "shinyjs", "shinyWidgets", "shinycssloaders"
 ))
 ```
 
 ### 3. Run app.R
 Open appp.R and run the following command:
 ```r
+shiny::runApp()
+```
+
+For deployment:
+```r
 rsconnect::deployApp()
 ```
 
 ---
-## License
+## 📜 License
 This project is licensed under the MIT License.
 
-## Contributors
+## 👥 Contributors
 Prathamesh Mohite – Data Scientist
 
-## Support & Feedback
-If you have questions or feedback, open an issue or reach out.
+## 📩 Support & Feedback
+Have questions, feature requests, or feedback? Let’s connect!
 
-Email: mohite.p@northeastern.edu
+📧 Email: mohite.p@northeastern.edu
 
-[LinkedIn Profile](https://www.linkedin.com/in/prathameshmohite96/)
+🔗 [LinkedIn Profile](https://www.linkedin.com/in/prathameshmohite96/)
