@@ -52,6 +52,9 @@ Project Root
 ├── data/
 │   ├── dataset.csv        # Historical booking data
 │   ├── output.csv         # Flights requiring forecasting
+│── www/                  # Static assets (CSS, JS, HTML, images)
+│   │── custom_ui.html    # External HTML content
+│   │── styles.css        # External CSS for styling
 ├── server.R               # Backend logic (data processing, forecasting, AI insights)
 ├── ui.R                   # Frontend interface for interactive analysis
 ├── global.R               # Data preprocessing & global variables
