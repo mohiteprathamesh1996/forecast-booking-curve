@@ -48,7 +48,7 @@ This **R Shiny** application dynamically forecasts airline **booking curves**, l
 ## **📁 Project Structure**  
 
 ```plaintext
-Project Root
+forecast-booking-curve (Root Directory)
 ├── data/
 │   ├── dataset.csv        # Historical booking data
 │   ├── output.csv         # Flights requiring forecasting
