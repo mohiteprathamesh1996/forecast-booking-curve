@@ -84,7 +84,7 @@ install.packages(c(
 ```
 
 ### 3️⃣ Configure OpenAI API Key
-To enable AI-generated revenue insights, you need to store your OpenAI API key in `.Renviron`
+To enable AI-generated revenue insights, you need to store your OpenAI API key in `.Renviron`:
 1. In the R terminal run this command:
 ```r
 usethis::edit_r_environ()
