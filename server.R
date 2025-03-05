@@ -318,7 +318,7 @@ server <- function(input, output) {
           actual_data = train
         ) %>%
         filter(
-          .model_desc == c("ACTUAL", "PROPHET W/ REGRESSORS")
+          .model_desc %in% c("ACTUAL", "PROPHET W/ REGRESSORS")
         )
 
       # Construct AI query
