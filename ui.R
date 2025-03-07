@@ -22,22 +22,6 @@ ui <- fluidPage(
           "Select Sector:",
           choices = routes
         ),
-        sliderInput(
-          "top_n_train",
-          "Most Recent Training Window (%):",
-          min = 0,
-          max = 100,
-          value = 100,
-          step = 1
-        ),
-        sliderInput(
-          "assess",
-          "Walk Forward Forecasting Window:",
-          min = 5,
-          max = 60,
-          value = 20,
-          step = 1
-        ),
         actionButton(
           "apply_filters",
           "Apply Filters",
