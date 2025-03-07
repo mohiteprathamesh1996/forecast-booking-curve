@@ -347,8 +347,8 @@ forecast_risk_summary <- output_long %>%
     Risk %in% c(
       "🟢 Low Risk - Reliable Forecasting",
       "🟡 Medium Risk - Monitor Accuracy",
-      "🟠 High Risk - Unstable Forecasting"
-      # "🔴 Very High Risk - Limited Data"
+      "🟠 High Risk - Unstable Forecasting",
+      "🔴 Very High Risk - Limited Data"
     )
   )
 
@@ -662,7 +662,7 @@ for (dep_date in unique(output_long$departure_Date)) {
               paste(
                 "[Target = ", target_cap,
                 " seats; Prediction Window = ", days_ahead,
-                "; ", risk_msg, "]",
+                " days; ", risk_msg, "]",
                 sep = ""
               )
             )
@@ -766,7 +766,8 @@ for (dep_date in unique(output_long$departure_Date)) {
                     )
                 ) %>%
                 arrange(`Days Before Departure`) %>%
-                pull(AvgPickUp),
+                pull(AvgPickUp) %>% 
+                round(2),
               collapse = ", "
             ),
             "\nDaily Booking Rate (Percentage): ",
@@ -785,7 +786,8 @@ for (dep_date in unique(output_long$departure_Date)) {
                     )
                 ) %>%
                 arrange(`Days Before Departure`) %>%
-                pull(DailyBookingRate),
+                pull(DailyBookingRate) %>% 
+                round(2),
               collapse = ", "
             ),
             "\n\n**Strategic Revenue Management Request:**",
@@ -843,7 +845,8 @@ ai_insights <- function(
     query,
     max_tokens = 500,
     min_tokens = 50,
-    decrement = 150) {
+    decrement = 150
+    ) {
   while (max_tokens >= min_tokens) {
     tryCatch(
       {
