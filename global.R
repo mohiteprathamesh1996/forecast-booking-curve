@@ -42,6 +42,9 @@ library(furrr) # Parallelized functions using 'future' package for faster execut
 library(Metrics) # Evaluation metrics for model performance (MAE, RMSE, etc.)
 library(caret) # Machine learning model training, tuning, and validation
 
+library(future)
+library(progress)
+
 
 # --- Load API Key for AI-Generated Insights ---
 openai_api_key <- Sys.getenv("OPENAI_API_KEY") # Retrieve API key securely
@@ -335,11 +338,556 @@ forecast_risk_summary <- output_long %>%
     )
   )
 
-# --- Extract Unique Departure Dates and Routes for Dropdowns ---
-departure_dates <- forecast_risk_summary %>%
-  pull(departure_Date) %>%
-  unique()
+pb <- progress_bar$new(
+  format = "  Processing [:bar] :percent ETA: :eta",
+  total = length(unique(output_long$departure_Date)),
+  clear = FALSE,
+  width = 60
+)
 
-routes <- forecast_risk_summary %>%
-  pull(Origin_Destination) %>%
-  unique()
+nested_forecasts_insights <- list()
+
+for (dep_date in unique(output_long$departure_Date)) {
+  pb$tick()
+  for (route in unique(output_long$Origin_Destination)) {
+    tryCatch(
+      {
+        # Filter and prepare training data
+        train <- output_long %>%
+          filter(
+            departure_Date == dep_date &
+              Origin_Destination == route
+          ) %>%
+          mutate(
+            `Date Before Departure` = departure_Date - days(`Days Before Departure`)
+          ) %>%
+          select(
+            `Date Before Departure`,
+            `Seats Sold`,
+            DailyBookingRate,
+            BookingRateAccelaration,
+            PercentageTargetReached,
+            LF_PercentageTargetReached,
+            AvgPickUp
+          ) %>%
+          arrange(`Date Before Departure`) %>%
+          drop_na()
+
+        target_cap <- forecast_risk_summary %>%
+          filter(departure_Date == dep_date & Origin_Destination == route) %>%
+          pull(Target)
+
+        days_ahead <- forecast_risk_summary %>%
+          filter(departure_Date == dep_date & Origin_Destination == route) %>%
+          pull(`Prediction Ahead`)
+
+        risk_msg <- forecast_risk_summary %>%
+          filter(departure_Date == dep_date & Origin_Destination == route) %>%
+          pull(Risk)
+
+        # Enable parallel processing
+        plan(multisession)
+
+        assess_size <- 30
+
+        while (assess_size >= 5) {
+          try(
+            {
+              splits <- rolling_origin(
+                data = train,
+                initial = round(0.80 * nrow(train)),
+                assess = assess_size,
+                cumulative = FALSE
+              )
+              # If rolling_origin() succeeds, break out of the loop
+              break
+            },
+            silent = TRUE
+          )
+
+          # Reduce assess_size by 5 if an error occurs
+          assess_size <- assess_size - 1
+        }
+
+        # Function to Train and Forecast for Each Split
+        walk_forward_results <- future_map_dfr(splits$splits, function(split) {
+          if (nrow(splits) == 1) {
+            train_data <- training(splits$splits[[1]])
+            test_data <- testing(splits$splits[[1]])
+          } else {
+            train_data <- training(split)
+            test_data <- testing(split)
+          }
+
+          # Train ARIMA Model
+          model_arima <- arima_reg() %>%
+            set_engine("auto_arima") %>%
+            fit(
+              `Seats Sold` ~ `Date Before Departure`,
+              train_data
+            )
+
+          # Train Prophet Model (Basic)
+          model_prophet <- prophet_reg(
+            growth = "logistic",
+            logistic_cap = target_cap
+          ) %>%
+            set_engine("prophet") %>%
+            fit(
+              `Seats Sold` ~ `Date Before Departure`,
+              train_data
+            )
+
+          # Train Prophet Model with Regressors (Optimized)
+          model_prophet_with_reg <- tryCatch(
+            {
+              prophet_reg(
+                growth = "logistic",
+                season = "multiplicative", # Primary model with seasonality
+                logistic_cap = target_cap,
+                changepoint_num = 1 # Less sensitivity to noise
+              ) %>%
+                set_engine("prophet") %>%
+                fit(
+                  `Seats Sold` ~ `Date Before Departure`
+                    + DailyBookingRate
+                    + LF_PercentageTargetReached,
+                  train_data
+                )
+            },
+            error = function(e) {
+              message("Error with seasonality: ", e$message)
+              message("Retrying without seasonality...")
+
+              # Fallback model without seasonality
+              prophet_reg(
+                growth = "logistic",
+                logistic_cap = target_cap,
+                changepoint_num = 1 # Less sensitivity to noise
+              ) %>%
+                set_engine("prophet") %>%
+                fit(
+                  `Seats Sold` ~ `Date Before Departure`
+                    + DailyBookingRate
+                    + LF_PercentageTargetReached,
+                  train_data
+                )
+            }
+          )
+
+
+          # Create Model Table for the Current Window
+          model_tbl <- modeltime_table(
+            model_arima,
+            model_prophet,
+            model_prophet_with_reg
+          )
+
+          # Forecast for the Test Set of Current Split
+          forecast_tbl <- model_tbl %>%
+            modeltime_calibrate(test_data) %>%
+            modeltime_forecast(new_data = test_data, actual_data = train) %>%
+            mutate(Window_ID = split$id) # Track which window this belongs to
+
+          return(forecast_tbl)
+        })
+
+        walk_forward_results_summary <- walk_forward_results %>%
+          filter(.model_desc != "ACTUAL") %>%
+          left_join(
+            walk_forward_results %>%
+              filter(.model_desc == "ACTUAL") %>%
+              select(.index, .actual = .value) %>%
+              distinct(.keep_all = TRUE),
+            by = ".index"
+          ) %>%
+          group_by(.model_desc) %>%
+          summarise(
+            MAE = round(mae(actual = .actual, predicted = .value), 2),
+            MAPE = round(mape(actual = .actual, predicted = .value), 2),
+            MASE = round(mase(actual = .actual, predicted = .value), 2),
+            SMAPE = round(smape(actual = .actual, predicted = .value), 2),
+            RMSE = round(rmse(actual = .actual, predicted = .value), 2),
+            RSQ = round(postResample(pred = .value, obs = .actual)["Rsquared"], 2)
+          )
+
+        advance_pickup_df <- output_long %>%
+          filter(
+            Origin_Destination == route &
+              departure_Date == dep_date
+          ) %>%
+          filter(
+            `Days Before Departure` == min(`Days Before Departure`, na.rm = TRUE)
+          )
+
+        # Generate future dates for forecasting
+        future_data <- future_frame(
+          .data = train,
+          .date_var = `Date Before Departure`,
+          .length_out = paste(days_ahead, "days")
+        ) %>%
+          mutate(
+            `Days Before Departure` = as.integer(
+              as.Date(dep_date) - `Date Before Departure`
+            )
+          ) %>%
+          left_join(
+            historical_summary_weekend %>%
+              filter(
+                WeekendDeparture == ifelse(
+                  test = wday(
+                    dep_date,
+                    label = TRUE,
+                    abbr = FALSE
+                  ) %in% weekend_definition,
+                  yes = 1,
+                  no = 0
+                )
+              ) %>%
+              filter(Origin_Destination == route) %>%
+              select(
+                `Days Before Departure`,
+                DailyBookingRate,
+                BookingRateAccelaration,
+                PercentageTargetReached,
+                LF_PercentageTargetReached,
+                AvgPickUp
+              ),
+            by = "Days Before Departure"
+          )
+
+        model_tbl <- modeltime_table(
+          arima_reg(
+            non_seasonal_ar = 2,
+            non_seasonal_differences = 1,
+            non_seasonal_ma = 1
+          ) %>%
+            set_engine("auto_arima") %>%
+            fit(
+              `Seats Sold` ~ `Date Before Departure`,
+              train
+            ),
+          prophet_reg(
+            growth = "logistic",
+            logistic_cap = target_cap
+          ) %>%
+            set_engine("prophet") %>%
+            fit(
+              `Seats Sold` ~ `Date Before Departure`,
+              train
+            ),
+          prophet_reg(
+            growth = "logistic",
+            season = "multiplicative",
+            logistic_cap = target_cap,
+            changepoint_num = 1
+          ) %>%
+            set_engine("prophet") %>%
+            fit(
+              `Seats Sold` ~ `Date Before Departure`
+                + DailyBookingRate
+                + LF_PercentageTargetReached,
+              train
+            )
+        )
+
+        dynamic_plot <- model_tbl %>%
+          modeltime_forecast(
+            new_data = future_data,
+            actual_data = train
+          ) %>%
+          left_join(
+            walk_forward_results %>%
+              filter(.model_desc != "ACTUAL") %>%
+              left_join(
+                walk_forward_results %>%
+                  filter(.model_desc == "ACTUAL") %>%
+                  select(.index, .actual = .value) %>%
+                  distinct(.keep_all = TRUE),
+                by = ".index"
+              ) %>%
+              mutate(error = .actual - .value) %>%
+              group_by(.model_desc) %>%
+              summarise(
+                mean_error = mean(error, na.rm = TRUE),
+                sd_error = sd(error, na.rm = TRUE) # Standard deviation of errors
+              ),
+            by = ".model_desc"
+          ) %>%
+          mutate(
+            .value = round(.value),
+            .conf_lo = .value - (1.96 * sd_error), # Lower bound
+            .conf_hi = .value + (1.96 * sd_error) # Upper bound
+          ) %>%
+          select(-c(mean_error, sd_error)) %>%
+          rbind(
+            data.frame(
+              .model_id = rep(NA, days_ahead),
+              .model_desc = rep("Traditional PickUp Model", days_ahead),
+              .key = rep("prediction", days_ahead),
+              .index = future_data %>% pull(`Date Before Departure`) %>% sort(),
+              .value = seq(
+                advance_pickup_df$`Seats Sold`,
+                advance_pickup_df$`Traditional Pick-Up Forecast`,
+                length.out = days_ahead
+              ),
+              .conf_lo = rep(NA, days_ahead),
+              .conf_hi = rep(NA, days_ahead)
+            )
+          ) %>%
+          mutate(
+            .value = round(.value),
+            .conf_lo = round(.conf_lo),
+            .conf_hi = round(.conf_hi)
+          ) %>%
+          plot_modeltime_forecast(
+            .x_lab = "Date before Departure",
+            .y_lab = "Seats Sold",
+            .title = paste(
+              "Booking Curve for", route, "on", as.Date(dep_date),
+              paste(
+                "[Target = ", target_cap,
+                " seats; Prediction Window = ", days_ahead,
+                "; ", risk_msg, "]",
+                sep = ""
+              )
+            )
+          )
+
+        forecast_summary <- model_tbl %>%
+          modeltime_forecast(
+            new_data = future_data,
+            actual_data = train
+          ) %>%
+          filter(
+            .model_desc %in% c("ACTUAL", "PROPHET W/ REGRESSORS")
+          )
+
+        nested_forecasts_insights[[
+          paste(as.Date(dep_date), route, sep = "__")
+        ]] <- list(
+          dep_date = as.Date(dep_date),
+          route = route,
+          walk_forward_results_summary = walk_forward_results_summary,
+          dynamic_plot = dynamic_plot,
+          query = paste(
+            "As an airline revenue management expert, analyze the forecasted booking
+        curve including the confidence intervals for an upcoming flight,
+        detailing expected demand patterns and commercial implications
+        leading up to departure.",
+            "\n\n**Booking Data Analysis:**",
+            "The ACTUAL seat bookings over time:",
+            paste(
+              forecast_summary %>%
+                filter(.key == "actual") %>%
+                arrange(.index) %>%
+                pull(.value),
+              collapse = ";"
+            ),
+            "\nhave their FORECASTED seat bookings over time:",
+            paste(
+              forecast_summary %>%
+                filter(.key == "prediction") %>%
+                arrange(.index) %>%
+                pull(.value) %>%
+                round(),
+              collapse = ";"
+            ),
+            "\n for the corresponding booking dates:",
+            paste(
+              forecast_summary %>%
+                filter(.key == "prediction") %>%
+                arrange(.index) %>%
+                pull(.index),
+              collapse = ";"
+            ),
+            ".",
+            "\n\nThe flight operates on the",
+            route, "route with a target capacity of",
+            target_cap, "seats.",
+            "\nThis forecast is contextualized against historical
+        booking trends for similar flights operating on",
+            ifelse(
+              test = wday(
+                as.Date(dep_date),
+                label = TRUE,
+                abbr = FALSE
+              ) %in% weekend_definition,
+              yes = "WEEKENDS.",
+              no = "WEEKDAYS."
+            ),
+            "\n\n**Historical Booking Insights:**",
+            "\nDays Before Departure: ",
+            paste(
+              historical_summary_weekend %>%
+                filter(
+                  Origin_Destination == route &
+                    WeekendDeparture == ifelse(
+                      test = wday(
+                        as.Date(dep_date),
+                        label = TRUE,
+                        abbr = FALSE
+                      ) %in% weekend_definition,
+                      yes = 1,
+                      no = 0
+                    )
+                ) %>%
+                arrange(`Days Before Departure`) %>%
+                pull(`Days Before Departure`),
+              collapse = ", "
+            ),
+            "\nAverage Pickup Rate (Seats): ",
+            paste(
+              historical_summary_weekend %>%
+                filter(
+                  Origin_Destination == route &
+                    WeekendDeparture == ifelse(
+                      test = wday(
+                        as.Date(dep_date),
+                        label = TRUE,
+                        abbr = FALSE
+                      ) %in% weekend_definition,
+                      yes = 1,
+                      no = 0
+                    )
+                ) %>%
+                arrange(`Days Before Departure`) %>%
+                pull(AvgPickUp),
+              collapse = ", "
+            ),
+            "\nDaily Booking Rate (Percentage): ",
+            paste(
+              historical_summary_weekend %>%
+                filter(
+                  Origin_Destination == route &
+                    WeekendDeparture == ifelse(
+                      test = wday(
+                        as.Date(dep_date),
+                        label = TRUE,
+                        abbr = FALSE
+                      ) %in% weekend_definition,
+                      yes = 1,
+                      no = 0
+                    )
+                ) %>%
+                arrange(`Days Before Departure`) %>%
+                pull(DailyBookingRate),
+              collapse = ", "
+            ),
+            "\n\n**Strategic Revenue Management Request:**",
+            "Based on the forecast and historical trends, provide a structured
+        assessment of the booking trajectory. Identify revenue optimization
+        opportunities, including demand-stimulation tactics if projected bookings
+        fall short. Include an approximate date (format: Month, Day, Year)
+        when booking momentum typically accelerates closer to departure.",
+            "Deliver the response in structured paragraphs with a fact-based
+        approach, avoiding bullet points or bold text. Use 'we' instead of
+        'I'. Focus on data-driven insights and strategic airline
+        pricing adjustments. As a side note, if projections fall
+        short by 3 or 4 points don't call it a significant lag."
+          )
+        )
+      },
+      error = function(e) {
+        message(
+          paste(
+            "Error in iteration with dep_date:",
+            as.Date(dep_date),
+            "and route:",
+            route,
+            ":",
+            e$message
+          )
+        )
+      }
+    )
+  }
+}
+
+
+# --- Extract Unique Departure Dates and Routes for Dropdowns ---
+departure_dates <- unique(
+  sapply(
+    strsplit(
+      names(nested_forecasts_insights), "__"
+    ), `[`, 1
+  )
+)
+
+routes <- unique(
+  sapply(
+    strsplit(
+      names(nested_forecasts_insights), "__"
+    ), `[`, 2
+  )
+)
+
+
+ai_insights <- function(
+    query,
+    max_tokens = 500,
+    min_tokens = 50,
+    decrement = 150) {
+  while (max_tokens >= min_tokens) {
+    tryCatch(
+      {
+        response <- openai::create_chat_completion(
+          model = "gpt-4",
+          messages = list(
+            list(
+              role = "system",
+              content = paste(
+                readLines("prompt/system_prompt.txt"),
+                collapse = " "
+              )
+            ),
+            list(
+              role = "user",
+              content = query
+            )
+          ),
+          temperature = 0.5,
+          max_tokens = max_tokens
+        )$choices$message.content
+
+        return(response)
+      },
+      error = function(e) {
+        if (
+          grepl("maximum context length|token limit", e$message)
+        ) {
+          message(
+            paste(
+              "Reducing max_tokens to",
+              max_tokens - decrement,
+              "due to token limit error..."
+            )
+          )
+
+          # Reduce token limit and retry
+          max_tokens <- max_tokens - decrement
+        } else {
+          stop(e)
+        }
+      }
+    )
+  }
+
+  message("Failed to get a response after reducing max_tokens.")
+  return(NA)
+}
+
+# Apply to dataframe
+queries_df <- do.call(
+  rbind,
+  lapply(
+    lapply(names(nested_forecasts_insights), function(id) {
+      query <- nested_forecasts_insights[[id]]$query
+      return(list(id = id, query = query))
+    }),
+    function(x) data.frame(id = x$id, query = x$query)
+  )
+) %>%
+  mutate(
+    analysis = unlist(map(query, ~ ai_insights(.x)))
+  )

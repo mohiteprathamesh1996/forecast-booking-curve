@@ -23,19 +23,11 @@ ui <- fluidPage(
           choices = routes
         ),
         sliderInput(
-          "top_n_train",
-          "Most Recent Training Window (%):",
-          min = 0,
-          max = 100,
-          value = 100,
-          step = 1
-        ),
-        sliderInput(
-          "assess",
-          "Walk Forward Forecasting Window:",
-          min = 5,
-          max = 60,
-          value = 20,
+          "completion_tokens",
+          "GPT Completion Tokens:",
+          min = 100,
+          max = 850,
+          value = 500,
           step = 1
         ),
         actionButton(
