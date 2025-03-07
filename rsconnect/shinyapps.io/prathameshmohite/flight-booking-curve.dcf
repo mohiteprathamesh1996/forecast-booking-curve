@@ -5,17 +5,8 @@ account: prathameshmohite
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 13945805
-<<<<<<< HEAD
-bundleId: 9905646
-=======
-bundleId: 9908214
->>>>>>> 986165f3c15aed67f389340ede0c294732357250
+bundleId: 9909279
 url: https://prathameshmohite.shinyapps.io/flight-booking-curve/
 version: 1
 asMultiple: FALSE
 asStatic: FALSE
-<<<<<<< HEAD
-ignoredFiles: .github/workflows/main.yml|.RData|Explore.Rmd
-=======
-ignoredFiles: .github/workflows/main.yml|.Renviron|data/dataset.csv|data/output.csv|Explore.Rmd|LICENSE|logs/app_logs.txt|prompt/system_prompt.txt|run_output.R
->>>>>>> 986165f3c15aed67f389340ede0c294732357250
