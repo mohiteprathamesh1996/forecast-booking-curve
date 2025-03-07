@@ -22,14 +22,6 @@ ui <- fluidPage(
           "Select Sector:",
           choices = routes
         ),
-        sliderInput(
-          "completion_tokens",
-          "GPT Completion Tokens:",
-          min = 100,
-          max = 850,
-          value = 500,
-          step = 1
-        ),
         actionButton(
           "apply_filters",
           "Apply Filters",

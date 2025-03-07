@@ -50,18 +50,24 @@ This **R Shiny** application dynamically forecasts airline **booking curves**, l
 ```plaintext
 forecast-booking-curve (Root Directory)
 ├── data/
-│   ├── dataset.csv        # Historical booking data
-│   ├── output.csv         # Flights requiring forecasting
-│── www/                   # Static assets (CSS, JS, HTML, images)
-│   │── custom_ui.html     # External HTML content
-│   │── styles.css         # External CSS for styling
-├── server.R               # Backend logic (data processing, forecasting, AI insights)
-├── ui.R                   # Frontend interface for interactive analysis
-├── global.R               # Data preprocessing & global variables
-├── Explore.Rmd            # Notebook for model experimentation
+│   ├── dataset.csv                    # Historical booking data
+│   ├── output.csv                     # Flights requiring forecasting
+├── prompt
+    ├── system_prompt.txt              # System Prompt (ARM)
+│── www/                               # Static assets (CSS, JS, HTML, images)
+│   │── custom_ui.html                 # External HTML content
+│   │── styles.css                     # External CSS for styling
+├── output
+    ├── historical_summary_weekend.rds # Historical Summary Statistics of Weekend/Weekday Departures
+    ├── nested_forecasts_insights.rds  # All Predictions
+    ├── queries_df.rds                 # AI-driven insights of forecasts
+├── server.R                           # Backend logic (data processing, forecasting, AI insights)
+├── ui.R                               # Frontend interface for interactive analysis
+├── global.R                           # Data preprocessing & global variables
+├── Explore.Rmd                        # Notebook for model experimentation
 ├── .github/workflows/
-│   ├── main.yml           # GitHub Actions for automated deployment
-├── README.md              # Project documentation
+│   ├── main.yml                       # GitHub Actions for automated deployment
+├── README.md                          # Project documentation
 ```
 
 
@@ -94,10 +100,15 @@ usethis::edit_r_environ()
 ```r
 OPENAI_API_KEY="your-api-key-here"
 ```
+### 4️⃣️ Get all forectass
+This will execute the script, which likely contains the logic to generate the forecasts, update any existing forecast data, and store the results for later use.
 
+```r
+source(run_output.R)
+```
 
-### 4️⃣ Run the Application
-Open appp.R and run the following command:
+### 5️⃣ Run the Application
+Open app.R and run the following command:
 ```r
 shiny::runApp()
 ```

@@ -1,138 +1,90 @@
 server <- function(input, output) {
-  # --- Reactive Expression: Filter Dataset Based on User Selection ---
-  filtered_data <- eventReactive(
-    input$apply_filters,
-    {
-      req(input$dep_date, input$route)
-
-      output_long %>%
-        filter(
-          departure_Date == as.Date(input$dep_date) &
-            Origin_Destination == input$route
-        )
-    }
-  )
-
+  # --- Reactive Expression for Filtering ---
+  filtered_inputs <- eventReactive(input$apply_filters, {
+    req(input$dep_date, input$route) # Ensure inputs are selected
+    list(dep_date = as.character(input$dep_date), route = input$route)
+  })
 
   # --- Dynamic UI: Historical Trends Title ---
-  # This dynamically generates the title based on user-selected route.
   output$historical_title <- renderUI({
-    req(filtered_data())
+    req(filtered_inputs()) # Wait for button press
 
     h3(
       paste(
         "Historical Trends Along",
-        input$route,
+        filtered_inputs()$route,
         "Sector on",
         ifelse(
-          test = wday(
-            input$dep_date,
-            label = TRUE,
-            abbr = FALSE
-          ) %in% weekend_definition,
-          yes = "Weekend Departures",
-          no = "Weekday Departures"
+          wday(filtered_inputs()$dep_date, label = TRUE, abbr = FALSE) %in% weekend_definition,
+          "Weekend Departures",
+          "Weekday Departures"
         )
       )
     )
   })
 
   # --- Generate Historical Trend Plots ---
-  # This creates two line plots:
-  # 1. Average Pickup (Seats Sold)
-  # 2. Daily Booking Rate
-  # The `grid.arrange()` function arranges them in a single view.
-
   output$historical_plots <- renderPlot({
-    req(filtered_data())
+    req(filtered_inputs()) # Wait for button press
+
     grid.arrange(
       historical_summary_weekend %>%
         filter(
-          Origin_Destination == input$route &
+          Origin_Destination == filtered_inputs()$route &
             WeekendDeparture == ifelse(
-              test = wday(
-                input$dep_date,
-                label = TRUE,
-                abbr = FALSE
-              ) %in% weekend_definition,
-              yes = 1,
-              no = 0
+              wday(filtered_inputs()$dep_date, label = TRUE, abbr = FALSE) %in% weekend_definition,
+              1, 0
             )
         ) %>%
         mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
-        ggplot(
-          aes(
-            x = `Days Before Departure`,
-            y = AvgPickUp
-          )
-        ) +
+        ggplot(aes(x = `Days Before Departure`, y = AvgPickUp)) +
         geom_line(na.rm = TRUE, color = "#D71920", linewidth = 0.8) +
         theme_bw(),
       historical_summary_weekend %>%
         filter(
-          Origin_Destination == input$route &
+          Origin_Destination == filtered_inputs()$route &
             WeekendDeparture == ifelse(
-              test = wday(
-                input$dep_date,
-                label = TRUE,
-                abbr = FALSE
-              ) %in% weekend_definition,
-              yes = 1,
-              no = 0
+              wday(filtered_inputs()$dep_date, label = TRUE, abbr = FALSE) %in% weekend_definition,
+              1, 0
             )
         ) %>%
         mutate(`Days Before Departure` = -1 * `Days Before Departure`) %>%
-        ggplot(
-          aes(
-            x = `Days Before Departure`,
-            y = DailyBookingRate
-          )
-        ) +
+        ggplot(aes(x = `Days Before Departure`, y = DailyBookingRate)) +
         geom_line(na.rm = TRUE, color = "darkgreen", linewidth = 0.8) +
         theme_bw()
     )
   })
 
   # --- Forecasting Model for Seat Sales ---
-  # This section builds predictive models (ARIMA & Prophet) based on past booking data.
   output$forecast_plot <- renderPlotly({
-    req(filtered_data()) # Ensure filtered dataset is available
-
-    # Capture user inputs
-    dep_date <- as.character(input$dep_date)
-    route <- input$route
+    req(filtered_inputs()) # Wait for button press
 
     walk_forward_results_summary <- nested_forecasts_insights[[
-      paste(as.Date(input$dep_date), input$route, sep = "__")
+      paste(as.Date(filtered_inputs()$dep_date), filtered_inputs()$route, sep = "__")
     ]]$walk_forward_results_summary
 
     # --- Display Model Accuracy in a Table ---
     output$accuracy_table <- renderDT({
+      req(filtered_inputs())
       walk_forward_results_summary
     })
 
-    # --- Generate AI Insights (OpenAI API Call) ---
+    # --- Generate AI Insights ---
     output$ai_insights <- renderUI({
-      # Extract AI-generated insights
+      req(filtered_inputs())
+
       insights <- queries_df %>%
-        filter(id == paste(as.Date(input$dep_date), input$route, sep = "__")) %>%
+        filter(id == paste(as.Date(filtered_inputs()$dep_date), filtered_inputs()$route, sep = "__")) %>%
         pull(analysis)
 
-      formatted_insights <- paste(
-        "<p>", insights, "</p>",
-        sep = ""
-      )
-
-      HTML(formatted_insights)
+      HTML(paste("<p>", insights, "</p>", sep = ""))
     })
 
     # --- Generate Forecast Plot ---
     forecast_plot <- nested_forecasts_insights[[
-      paste(as.Date(input$dep_date), input$route, sep = "__")
+      paste(as.Date(filtered_inputs()$dep_date), filtered_inputs()$route, sep = "__")
     ]]$dynamic_plot
 
-
-    # Convert GGPlot to Interactive Plotly Graph
     ggplotly(forecast_plot)
   })
 }
