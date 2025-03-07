@@ -1147,7 +1147,12 @@ pb <- progress_bar$new(
 
 nested_forecasts_insights <- list()
 
-for (dep_date in unique(output_long$departure_Date)) {
+# for (dep_date in unique(output_long$departure_Date)) {
+for (
+  dep_date in c(
+    "2023-07-13", "2023-09-10", "2023-09-11", "2023-09-12", "2023-09-13"
+    )
+  ) {
   pb$tick()
   for (route in unique(output_long$Origin_Destination)) {
     tryCatch(
@@ -1540,7 +1545,8 @@ for (dep_date in unique(output_long$departure_Date)) {
                     )
                 ) %>%
                 arrange(`Days Before Departure`) %>%
-                pull(DailyBookingRate),
+                pull(DailyBookingRate) %>% 
+                round(2),
               collapse = ", "
             ),
             "\n\n**Strategic Revenue Management Request:**",
@@ -1573,10 +1579,10 @@ for (dep_date in unique(output_long$departure_Date)) {
   }
 }
 
-saveRDS(
-  object = nested_forecasts_insights,
-  file = "ouptut/nested_forecasts_insights.rds"
-)
+# saveRDS(
+#   object = nested_forecasts_insights,
+#   file = "ouptut/nested_forecasts_insights.rds"
+# )
 ```
 
 
@@ -1593,6 +1599,8 @@ nested_forecasts_insights[[paste("2023-03-10", "DXB-XXX", sep = "__")]]$walk_for
 nested_forecasts_insights[[paste("2023-03-10", "DXB-XXX", sep = "__")]]$dynamic_plot
 
 cat(nested_forecasts_insights[[paste("2023-03-10", "DXB-XXX", sep = "__")]]$query)
+
+nested_forecasts_insights$`2023-07-13__DXB-XXX`
 ```
 
 
@@ -1607,8 +1615,9 @@ cat(nested_forecasts_insights[[paste("2023-03-10", "DXB-XXX", sep = "__")]]$quer
 ai_insights <- function(
     query,
     max_tokens = 500,
-    min_tokens = 100,
-    decrement = 150) {
+    min_tokens = 50,
+    decrement = 150
+    ) {
   while (max_tokens >= min_tokens) {
     tryCatch(
       {
