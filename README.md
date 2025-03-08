@@ -100,7 +100,7 @@ usethis::edit_r_environ()
 ```r
 OPENAI_API_KEY="your-api-key-here"
 ```
-### 4️⃣️ Get all forectass
+### 4️⃣️ Get all forecasts
 This will execute the script, which likely contains the logic to generate the forecasts, update any existing forecast data, and store the results for later use.
 
 ```r
