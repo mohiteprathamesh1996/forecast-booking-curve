@@ -850,11 +850,14 @@ forecast_risk_summary <- output_long %>%
 
 
 
+
+
+
 # Modified Solution based on walk-forward testing
 
 ```{r, warning=FALSE}
 dep_date <- "2023-09-10"
-route <- "DXB-XXX"
+route <- "XXX-DXB"
 
 
 train <- output_long %>%
@@ -945,7 +948,7 @@ walk_forward_results <- future_map_dfr(splits$splits, function(split) {
   # Train Prophet Model with Regressors (Optimized)
   model_prophet_with_reg <- prophet_reg(
     growth = "logistic",
-    season = "multiplicative",
+    # season = "multiplicative",
     logistic_cap = target_cap,
     changepoint_num = 1 # Less sensitivity to noise
   ) %>%
@@ -1057,7 +1060,7 @@ model_tbl <- modeltime_table(
     ),
   prophet_reg(
     growth = "logistic",
-    season = "multiplicative",
+    # season = "multiplicative",
     logistic_cap = target_cap,
     changepoint_num = 1
   ) %>%
@@ -1070,7 +1073,7 @@ model_tbl <- modeltime_table(
     )
 )
 
-model_tbl %>%
+dynamic_plot <- model_tbl %>%
   modeltime_forecast(
     new_data = future_data,
     actual_data = train
@@ -1132,6 +1135,153 @@ model_tbl %>%
       )
     )
   )
+
+# nested_forecasts_insights <- readRDS(
+#   file = "ouptut/nested_forecasts_insights.rds"
+#   )
+
+forecast_summary <- model_tbl %>%
+          modeltime_forecast(
+            new_data = future_data,
+            actual_data = train
+          ) %>%
+          filter(
+            .model_desc %in% c("ACTUAL", "PROPHET W/ REGRESSORS")
+          )
+
+query <- paste(
+            "As an airline revenue management expert, analyze the forecasted booking
+        curve including the confidence intervals for an upcoming flight,
+        detailing expected demand patterns and commercial implications
+        leading up to departure.",
+            "\n\n**Booking Data Analysis:**",
+            "The ACTUAL seat bookings over time:",
+            paste(
+              forecast_summary %>%
+                filter(.key == "actual") %>%
+                arrange(.index) %>%
+                pull(.value),
+              collapse = ";"
+            ),
+            "\nhave their FORECASTED seat bookings over time:",
+            paste(
+              forecast_summary %>%
+                filter(.key == "prediction") %>%
+                arrange(.index) %>%
+                pull(.value) %>%
+                round(),
+              collapse = ";"
+            ),
+            "\n for the corresponding booking dates:",
+            paste(
+              forecast_summary %>%
+                filter(.key == "prediction") %>%
+                arrange(.index) %>%
+                pull(.index),
+              collapse = ";"
+            ),
+            ".",
+            "\n\nThe flight operates on the",
+            route, "route with a target capacity of",
+            target_cap, "seats.",
+            "\nThis forecast is contextualized against historical
+        booking trends for similar flights operating on",
+            ifelse(
+              test = wday(
+                as.Date(dep_date),
+                label = TRUE,
+                abbr = FALSE
+              ) %in% weekend_definition,
+              yes = "WEEKENDS.",
+              no = "WEEKDAYS."
+            ),
+            "\n\n**Historical Booking Insights:**",
+            "\nDays Before Departure: ",
+            paste(
+              historical_summary_weekend %>%
+                filter(
+                  Origin_Destination == route &
+                    WeekendDeparture == ifelse(
+                      test = wday(
+                        as.Date(dep_date),
+                        label = TRUE,
+                        abbr = FALSE
+                      ) %in% weekend_definition,
+                      yes = 1,
+                      no = 0
+                    )
+                ) %>%
+                arrange(`Days Before Departure`) %>%
+                pull(`Days Before Departure`),
+              collapse = ", "
+            ),
+            "\nAverage Pickup Rate (Seats): ",
+            paste(
+              historical_summary_weekend %>%
+                filter(
+                  Origin_Destination == route &
+                    WeekendDeparture == ifelse(
+                      test = wday(
+                        as.Date(dep_date),
+                        label = TRUE,
+                        abbr = FALSE
+                      ) %in% weekend_definition,
+                      yes = 1,
+                      no = 0
+                    )
+                ) %>%
+                arrange(`Days Before Departure`) %>%
+                pull(AvgPickUp),
+              collapse = ", "
+            ),
+            "\nDaily Booking Rate (Percentage): ",
+            paste(
+              historical_summary_weekend %>%
+                filter(
+                  Origin_Destination == route &
+                    WeekendDeparture == ifelse(
+                      test = wday(
+                        as.Date(dep_date),
+                        label = TRUE,
+                        abbr = FALSE
+                      ) %in% weekend_definition,
+                      yes = 1,
+                      no = 0
+                    )
+                ) %>%
+                arrange(`Days Before Departure`) %>%
+                pull(DailyBookingRate) %>% 
+                round(2),
+              collapse = ", "
+            ),
+            "\n\n**Strategic Revenue Management Request:**",
+            "Based on the forecast and historical trends, provide a structured
+        assessment of the booking trajectory. Identify revenue optimization
+        opportunities, including demand-stimulation tactics if projected bookings
+        fall short. Include an approximate date (format: Month, Day, Year)
+        when booking momentum typically accelerates closer to departure.",
+            "Deliver the response in structured paragraphs with a fact-based
+        approach, avoiding bullet points or bold text. Use 'we' instead of
+        'I'. Focus on data-driven insights and strategic airline
+        pricing adjustments. As a side note, if projections fall
+        short by 3 or 4 points don't call it a significant lag."
+          )
+
+
+paste(as.Date(dep_date), route, sep = "__")
+
+nested_forecasts_insights[[
+  paste(as.Date(dep_date), route, sep = "__")
+]] <- list(
+  dep_date = dep_date,
+  route = route,
+  walk_forward_results_summary = walk_forward_results_summary,
+  dynamic_plot = dynamic_plot,
+  query = query
+  )
+
+
+nested_forecasts_insights$`2023-09-10__XXX-DXB`
 ```
 
 
@@ -1150,7 +1300,7 @@ nested_forecasts_insights <- list()
 # for (dep_date in unique(output_long$departure_Date)) {
 for (
   dep_date in c(
-    "2023-07-13", "2023-09-10", "2023-09-11", "2023-09-12", "2023-09-13"
+    "2023-09-10", "2023-09-11", "2023-09-13"
     )
   ) {
   pb$tick()
@@ -1248,6 +1398,47 @@ for (
                 + DailyBookingRate
                 + LF_PercentageTargetReached,
               training(split)
+            )
+          
+          tryCatch(
+              {
+                # First attempt with seasonality
+                model_prophet_with_reg <- prophet_reg(
+                  growth = "logistic",
+                  season = "multiplicative",
+                  logistic_cap = target_cap,
+                  changepoint_num = 1 # Less sensitivity to noise
+                ) %>%
+                  set_engine("prophet") %>%
+                  fit(
+                    `Seats Sold` ~ `Date Before Departure`
+                      + DailyBookingRate
+                      + LF_PercentageTargetReached,
+                    training(split)
+                  )
+                
+                message("Model fit successful with multiplicative seasonality.")
+              },
+              error = function(e) {
+                message("Error encountered: ", e$message)
+                message("Retrying model fit without seasonality...")
+          
+                # Retry without the season parameter
+                model_prophet_with_reg <- prophet_reg(
+                  growth = "logistic",
+                  logistic_cap = target_cap,
+                  changepoint_num = 1 # Less sensitivity to noise
+                ) %>%
+                  set_engine("prophet") %>%
+                  fit(
+                    `Seats Sold` ~ `Date Before Departure`
+                      + DailyBookingRate
+                      + LF_PercentageTargetReached,
+                    training(split)
+                  )
+                
+                message("Model fit successful without seasonality.")
+              }
             )
 
           # Create Model Table for the Current Window
@@ -1600,7 +1791,7 @@ nested_forecasts_insights[[paste("2023-03-10", "DXB-XXX", sep = "__")]]$dynamic_
 
 cat(nested_forecasts_insights[[paste("2023-03-10", "DXB-XXX", sep = "__")]]$query)
 
-nested_forecasts_insights$`2023-07-13__DXB-XXX`
+nested_forecasts_insights
 ```
 
 
@@ -1685,7 +1876,7 @@ queries_df <- do.call(
 
 ```{r}
 queries_df %>%
-  filter(id == paste("2023-09-10", "DXB-XXX", sep = "__")) %>%
+  filter(id == paste("2023-09-10", "XXX-DXB", sep = "__")) %>%
   pull(analysis)
 ```
 
@@ -1712,6 +1903,19 @@ nested_forecasts_insights["2023-03-10__DXB-XXX"]$dynamic_plot
 
 
 
+```{r}
+saveRDS(object = nested_forecasts_insights, file = "ouptut/nested_forecasts_insights.rds")
+
+saveRDS(object = queries_df, file = "ouptut/queries_df.rds")
+
+readRDS(
+  file = "ouptut/queries_df.rds"
+  )
+
+readRDS(
+  file = "output/nested_forecasts_insights.rds"
+  )
+```
 
 
 
