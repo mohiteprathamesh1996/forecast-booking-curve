@@ -129,6 +129,7 @@ dataset_long <- dataset %>%
     names_to = "Days Before Departure",
     values_to = "Seats Sold"
   ) %>%
+  drop_na() %>%
   # Identify if the departure date falls on a weekend
   mutate(
     WeekendDeparture = ifelse(
