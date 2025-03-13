@@ -6,6 +6,8 @@
 ## **🚀 Overview**  
 This **R Shiny** application dynamically forecasts airline **booking curves**, leveraging advanced **time-series models (ARIMA, Prophet, and ML-based regressors)**. It provides **AI-driven revenue insights**, helping airlines optimize seat allocation and pricing strategies.  
 
+<div style="display: flex; justify-content: center; align-items: center; gap: 20px;"> <img src="https://your-image-link-1.png" alt="Booking Curve Forecast" width="45%"> <img src="https://your-image-link-2.png" alt="Model Performance Comparison" width="45%"> </div>
+
 ### **🔍 Key Capabilities**  
 ✔ **Visualize Historical Booking Trends** with interactive graphs.  
 ✔ **Predict Seat Demand** using machine learning models.  
