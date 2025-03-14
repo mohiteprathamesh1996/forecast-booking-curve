@@ -31,10 +31,12 @@ jobs:
               "forecast", "prophet", "modeltime", "tidymodels", "timetk",
               "lubridate", "timeDate", "gridExtra", "mgcv", "plotly", "DT",
               "openai", "memoise", "imputeTS", "zoo", "shinyjs",
-              "shinycssloaders", "shinyWidgets", "rsconnect"
-            ), 
-            dependencies=TRUE, repos="http://cran.r-project.org"
-          )
+              "shinycssloaders", "shinyWidgets", "rsconnect",
+              "caret", "log4r", "Metrics"
+            ),
+            dependencies=TRUE, 
+            repos="http://cran.r-project.org"
+            )
         shell: Rscript {0}
 
       - name: Verify installed packages
