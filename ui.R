@@ -39,68 +39,81 @@ ui <- fluidPage(
       )
     ),
 
-    # --- Main Panel (Output Display) ---
+    # --- Main Panel with Tabs ---
     column(
       width = 8, # Main panel takes 8 columns
-      div(
-        plotlyOutput("forecast_plot", width = "100%"),
-        style = "
-        padding: 10px;
-        background-color: #fff;
-        border-radius: 10px;
-        box-shadow: 3px 3px 15px rgba(0,0,0,0.1);
-        "
-      ),
+      tabsetPanel(
 
-      # --- Historical Trends Title ---
-      div(
-        uiOutput("historical_title"),
-        style = "
-        font-family: 'Oswald', sans-serif;
-        font-weight: 600;
-        font-size: 20px;
-        color: #333;
-        text-align: center;
-        padding-top: 15px;
-        "
-      ),
+        # --- First Tab: Forecast & Historical Analysis ---
+        tabPanel(
+          "Forecasting Dashboard",
+          div(
+            plotlyOutput("forecast_plot", width = "100%"),
+            style = "
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 3px 3px 15px rgba(0,0,0,0.1);
+            "
+          ),
 
-      # --- Historical Trend Plots ---
-      plotOutput("historical_plots"),
+          # --- Historical Trends Title ---
+          div(
+            uiOutput("historical_title"),
+            style = "
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            font-size: 20px;
+            color: #333;
+            text-align: center;
+            padding-top: 15px;
+            "
+          ),
 
-      # --- AI-Generated Insights Section ---
-      h3(
-        "Analysis of Projections",
-        style = "
-        font-family: 'Oswald', sans-serif;
-        font-weight: 600;
-        text-align: center;
-        color: #333;
-        "
-      ),
-      div(
-        uiOutput("ai_insights"),
-        style = "
-        font-family: 'Playfair Display', serif;
-        font-size: 18px;
-        font-weight: 500;
-        color: #333;
-        text-align: justify;
-        padding: 15px;
-        "
-      ),
+          # --- Historical Trend Plots ---
+          plotOutput("historical_plots"),
 
-      # --- Model Accuracy Metrics Table ---
-      h3(
-        "Model Performance Metrics (Walk-Forward Validation)",
-        style = "
-        font-family: 'Oswald', sans-serif;
-        font-weight: 600;
-        text-align: center;
-        color: #333;
-        "
-      ),
-      DTOutput("accuracy_table")
+          # --- AI-Generated Insights Section ---
+          h3(
+            "Analysis of Projections",
+            style = "
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            text-align: center;
+            color: #333;
+            "
+          ),
+          div(
+            uiOutput("ai_insights"),
+            style = "
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            font-weight: 500;
+            color: #333;
+            text-align: justify;
+            padding: 15px;
+            "
+          ),
+
+          # --- Model Accuracy Metrics Table ---
+          h3(
+            "Model Performance Metrics (Walk-Forward Validation)",
+            style = "
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            text-align: center;
+            color: #333;
+            "
+          ),
+          DTOutput("accuracy_table")
+        ),
+
+        # --- Second Tab: Additional Analysis ---
+        tabPanel(
+          "Additional Analysis",
+          plotlyOutput("additional_plot", height = "900px")
+        )
+      )
     )
   )
 )

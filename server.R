@@ -1,3 +1,5 @@
+library(plotly)
+
 server <- function(input, output) {
   # --- Reactive Expression for Filtering ---
   filtered_inputs <- eventReactive(input$apply_filters, {
@@ -86,5 +88,16 @@ server <- function(input, output) {
     ]]$dynamic_plot
 
     ggplotly(forecast_plot)
+  })
+
+  # --- 3D Scatter Plot for Additional Analysis ---
+  output$additional_plot <- renderPlotly({
+    req(filtered_inputs()) # Wait for button press
+
+    if (wday(as.Date(filtered_inputs()$dep_date), label = TRUE, abbr = FALSE) %in% weekend_definition) {
+      allcurves[[filtered_inputs()$route]]$weekend_profile
+    } else {
+      allcurves[[filtered_inputs()$route]]$weekday_profile
+    }
   })
 }

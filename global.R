@@ -59,6 +59,11 @@ queries_df <- readRDS(
   file = "ouptut/queries_df.rds"
 )
 
+allcurves <- readRDS(
+  file = "ouptut/allcurves.rds"
+)
+
+
 # # --- Extract Unique Departure Dates and Routes for Dropdowns ---
 departure_dates <- unique(
   sapply(
